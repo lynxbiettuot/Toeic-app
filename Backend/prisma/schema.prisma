@@ -1,0 +1,286 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Users {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  password_hash String
+  full_name     String
+  avatar_url    String?
+  is_active     Boolean   @default(true)
+  reset_otp     String?           // OTP
+  otp_expiry    DateTime?         // OTP expiry
+  created_at    DateTime  @default(now())
+  updated_at    DateTime? @updatedAt
+
+  test_sessions       Test_sessions[]
+  flashcard_sets      Flashcard_sets[]
+  spaced_cards        Spaced_repetition_cards[]
+  review_logs         Flashcard_review_logs[]
+  saved_sets          User_saved_sets[]
+  refresh_tokens      Refresh_tokens[]
+
+  @@map("Users")
+}
+
+model Admins {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password_hash String
+  full_name     String
+  role          String
+  is_active     Boolean  @default(true)
+  reset_otp       String?
+  otp_expiry      DateTime?
+  created_at    DateTime @default(now())
+
+  exam_sets       Exam_sets[]
+  flashcard_sets  Flashcard_sets[]
+  admin_refresh_tokens Admin_refresh_tokens[]
+
+  @@map("Admins")
+}
+
+model Admin_refresh_tokens {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique @db.VarChar(512)
+  admin_id   Int
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  admin Admins @relation(fields: [admin_id], references: [id])
+
+  @@map("Admin_refresh_tokens")
+}
+
+model Exam_sets {
+  id               Int       @id @default(autoincrement())
+  title            String
+  year             Int?
+  type             String
+  audio_url        String?
+  thumbnail_url    String?
+  duration_minutes Int       @default(120)
+  total_questions  Int       @default(200)
+  status           String    @default("DRAFT")
+  created_by       Int?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime?
+  deleted_at       DateTime?
+
+  admin            Admins?   @relation(fields: [created_by], references: [id])
+  questions        Questions[]
+  question_groups  Question_groups[]
+  sessions         Test_sessions[]
+
+  @@map("Exam_sets")
+}
+
+model Question_groups {
+  id           Int    @id @default(autoincrement())
+  exam_set_id  Int
+  part_number  Int
+  passage_text String?
+  transcript   String?
+  image_url    String?
+  audio_url    String?
+
+  exam_set     Exam_sets @relation(fields: [exam_set_id], references: [id])
+  questions    Questions[]
+
+  @@map("Question_groups")
+}
+
+model Questions {
+  id              Int     @id @default(autoincrement())
+  exam_set_id     Int
+  part_number     Int
+  question_number Int
+  content         String?
+  transcript      String?
+  image_url       String?
+  audio_url       String?
+  correct_answer  String
+  explanation     String?
+  group_id        Int?
+  created_at      DateTime @default(now())
+
+  exam_set        Exam_sets       @relation(fields: [exam_set_id], references: [id])
+  group           Question_groups? @relation(fields: [group_id], references: [id])
+  answers         Answer_options[]
+  user_answers    User_answers[]
+
+  @@map("Questions")
+}
+
+model Answer_options {
+  id           Int    @id @default(autoincrement())
+  question_id  Int
+  option_label String
+  content      String
+
+  question     Questions @relation(fields: [question_id], references: [id])
+
+  @@unique([question_id, option_label])
+  @@map("Answer_options")
+}
+
+model Test_sessions {
+  id                  Int      @id @default(autoincrement())
+  user_id             Int
+  exam_set_id         Int
+  started_at          DateTime
+  submitted_at        DateTime?
+  listening_score     Int?
+  reading_score       Int?
+  total_score         Int?
+  status              String   @default("IN_PROGRESS")
+  ai_overall_feedback String?
+
+  user        Users      @relation(fields: [user_id], references: [id])
+  exam_set    Exam_sets  @relation(fields: [exam_set_id], references: [id])
+  answers     User_answers[]
+  part_scores Session_part_scores[]
+
+  @@map("Test_sessions")
+}
+
+model Session_part_scores {
+  id               Int @id @default(autoincrement())
+  session_id       Int
+  part_number      Int
+  correct_count    Int?
+  total_questions  Int?
+
+  session Test_sessions @relation(fields: [session_id], references: [id])
+
+  @@map("Session_part_scores")
+}
+
+model User_answers {
+  id              Int      @id @default(autoincrement())
+  session_id      Int
+  question_id     Int
+  selected_option String?
+  is_correct      Boolean?
+  is_marked       Boolean  @default(false)
+  is_understood   Boolean  @default(false)
+  ai_explanation  String?
+  answered_at     DateTime?
+
+  session   Test_sessions @relation(fields: [session_id], references: [id])
+  question  Questions     @relation(fields: [question_id], references: [id])
+
+  @@unique([session_id, question_id])
+  @@map("User_answers")
+}
+
+model Flashcard_sets {
+  id              Int      @id @default(autoincrement())
+  owner_user_id   Int?
+  owner_admin_id  Int?
+  title           String
+  description     String?
+  cover_image_url String?
+  visibility      String   @default("PRIVATE")
+  is_system       Boolean  @default(false)
+  status          String   @default("DRAFT")
+  card_count      Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime?
+  deleted_at      DateTime?
+
+  user        Users?  @relation(fields: [owner_user_id], references: [id])
+  admin       Admins? @relation(fields: [owner_admin_id], references: [id])
+  flashcards  Flashcards[]
+  saved_by    User_saved_sets[]
+
+  @@map("Flashcard_sets")
+}
+
+model Flashcards {
+  id            Int      @id @default(autoincrement())
+  set_id        Int
+  word          String
+  word_type     String?
+  pronunciation String?
+  definition    String
+  example       String?
+  image_url     String?
+  audio_url     String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime?
+
+  set        Flashcard_sets            @relation(fields: [set_id], references: [id])
+  spaced     Spaced_repetition_cards[]
+  logs       Flashcard_review_logs[]
+
+  @@map("Flashcards")
+}
+
+model Spaced_repetition_cards {
+  id               Int      @id @default(autoincrement())
+  user_id          Int
+  flashcard_id     Int
+  ease_factor      Float    @default(2.5)
+  interval_days    Int      @default(1)
+  repetitions      Int      @default(0)
+  next_review_at   DateTime?
+  last_reviewed_at DateTime?
+  last_rating      String?
+
+  user      Users     @relation(fields: [user_id], references: [id])
+  flashcard Flashcards @relation(fields: [flashcard_id], references: [id])
+
+  @@unique([user_id, flashcard_id])
+  @@map("Spaced_repetition_cards")
+}
+
+model Flashcard_review_logs {
+  id           Int      @id @default(autoincrement())
+  user_id      Int
+  flashcard_id Int
+  rating       String?
+  reviewed_at  DateTime @default(now())
+
+  user      Users     @relation(fields: [user_id], references: [id])
+  flashcard Flashcards @relation(fields: [flashcard_id], references: [id])
+
+  @@map("Flashcard_review_logs")
+}
+
+model User_saved_sets {
+  id       Int      @id @default(autoincrement())
+  user_id  Int
+  set_id   Int
+  saved_at DateTime @default(now())
+
+  user Users          @relation(fields: [user_id], references: [id])
+  set  Flashcard_sets @relation(fields: [set_id], references: [id])
+
+  @@unique([user_id, set_id])
+  @@map("User_saved_sets")
+}
+
+model Refresh_tokens {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique @db.VarChar(512)
+  user_id    Int
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user Users @relation(fields: [user_id], references: [id])
+
+  @@map("Refresh_tokens")
+}
