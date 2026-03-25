@@ -1,9 +1,10 @@
-﻿import express, { type NextFunction, type Request, type Response } from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import { prisma } from './lib/prisma.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import userExamRoutes from './routes/user/exam.js';
 import flashcardRoutes from './routes/flashcard.routes.js';
 
 const app = express();
@@ -15,7 +16,10 @@ app.use(cookieParser());
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+  );
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
@@ -28,6 +32,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 //xác thực
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/exams', userExamRoutes);
 app.use('/flashcards', flashcardRoutes);
 
 //route của admin

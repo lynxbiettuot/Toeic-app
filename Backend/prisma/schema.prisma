@@ -202,6 +202,7 @@ model Flashcard_sets {
   created_at            DateTime @default(now())
   updated_at            DateTime?
   deleted_at            DateTime?
+  warned_at             DateTime?
 
   user               Users?  @relation(fields: [owner_user_id], references: [id])
   admin              Admins? @relation(fields: [owner_admin_id], references: [id])
