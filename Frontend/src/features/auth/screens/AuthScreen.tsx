@@ -52,12 +52,17 @@ const isEmailValid = (value: string) => emailPattern.test(value.trim());
 const isPasswordValid = (value: string) => value.length >= 8;
 
 type AuthScreenProps = {
-  onLoginSuccess?: (displayName?: string) => void;
+  onLoginSuccess?: (payload?: { displayName?: string; userId?: number }) => void;
 };
 
 const extractDisplayName = (userData?: Record<string, unknown>) => {
   const nameCandidate = userData?.full_name ?? userData?.name ?? userData?.email;
   return typeof nameCandidate === 'string' ? nameCandidate : undefined;
+};
+
+const extractUserId = (userData?: Record<string, unknown>) => {
+  const idCandidate = userData?.id;
+  return typeof idCandidate === 'number' && Number.isInteger(idCandidate) ? idCandidate : undefined;
 };
 
 export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
@@ -164,7 +169,10 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
 
       await saveAuthTokens(response.accessToken, response.refreshToken);
       setFeedback({ type: 'success', text: response.message ?? 'Đăng nhập thành công.' });
-      onLoginSuccess?.(extractDisplayName(response.userData));
+      onLoginSuccess?.({
+        displayName: extractDisplayName(response.userData),
+        userId: extractUserId(response.userData)
+      });
     });
   };
 

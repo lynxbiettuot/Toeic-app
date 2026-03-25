@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Feather,
   FontAwesome5,
@@ -11,11 +11,14 @@ import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
 
 type UserHomeScreenProps = {
   displayName?: string;
+  onOpenFlashcard?: () => void;
+  onOpenVocabularyReview?: () => void;
 };
 
 type QuickAction = {
   label: string;
   icon: React.ReactNode;
+  onPress?: () => void;
 };
 
 const topActions: QuickAction[] = [
@@ -29,7 +32,25 @@ const topActions: QuickAction[] = [
   { label: 'Lịch sử & Sai sót', icon: <MaterialCommunityIcons name="history" size={22} color="#111111" /> }
 ];
 
-export function UserHomeScreen({ displayName = 'Linh' }: UserHomeScreenProps) {
+export function UserHomeScreen({
+  displayName = 'Linh',
+  onOpenFlashcard,
+  onOpenVocabularyReview
+}: UserHomeScreenProps) {
+  const actions = topActions.map((action) =>
+    action.label === 'Flashcard'
+      ? {
+          ...action,
+          onPress: onOpenFlashcard
+        }
+      : action.label === 'Ôn từ vựng'
+        ? {
+            ...action,
+            onPress: onOpenVocabularyReview
+          }
+      : action
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -44,11 +65,11 @@ export function UserHomeScreen({ displayName = 'Linh' }: UserHomeScreenProps) {
           <Text style={styles.greeting}>Hello, {displayName}</Text>
 
           <View style={styles.grid}>
-            {topActions.map((action) => (
-              <View key={action.label} style={styles.gridItem}>
+            {actions.map((action) => (
+              <Pressable key={action.label} style={styles.gridItem} onPress={action.onPress}>
                 <View style={styles.iconTile}>{action.icon}</View>
                 <Text style={styles.gridLabel}>{action.label}</Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         </ScrollView>
@@ -58,11 +79,21 @@ export function UserHomeScreen({ displayName = 'Linh' }: UserHomeScreenProps) {
         </View>
 
         <View style={styles.bottomNav}>
-          <Ionicons name="home" size={28} color="#111111" />
-          <Ionicons name="reader-outline" size={26} color="#111111" />
-          <Feather name="clock" size={26} color="#111111" />
-          <FontAwesome5 name="gem" size={22} color="#111111" />
-          <Ionicons name="settings-outline" size={28} color="#111111" />
+          <Pressable style={styles.navButton} onPress={() => undefined}>
+            <Ionicons name="home" size={28} color="#111111" />
+          </Pressable>
+          <View style={styles.navButton}>
+            <Ionicons name="reader-outline" size={26} color="#111111" />
+          </View>
+          <Pressable style={styles.navButton} onPress={onOpenVocabularyReview}>
+            <Feather name="clock" size={26} color="#111111" />
+          </Pressable>
+          <View style={styles.navButton}>
+            <FontAwesome5 name="gem" size={22} color="#111111" />
+          </View>
+          <View style={styles.navButton}>
+            <Ionicons name="settings-outline" size={28} color="#111111" />
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -151,5 +182,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around'
+  },
+  navButton: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center'
   }
 });
