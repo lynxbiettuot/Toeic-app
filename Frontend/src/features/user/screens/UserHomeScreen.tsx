@@ -1,16 +1,24 @@
-﻿import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+﻿import React from "react";
+import {
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import {
   Feather,
   FontAwesome5,
   Ionicons,
   MaterialCommunityIcons,
-  MaterialIcons
-} from '@expo/vector-icons';
-import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
+  MaterialIcons,
+} from "@expo/vector-icons";
+import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
 
 type UserHomeScreenProps = {
   displayName?: string;
+  onNavigateToExam?: () => void;
 };
 
 type QuickAction = {
@@ -19,17 +27,52 @@ type QuickAction = {
 };
 
 const topActions: QuickAction[] = [
-  { label: 'Listening', icon: <Feather name="headphones" size={22} color="#111111" /> },
-  { label: 'Reading', icon: <Ionicons name="book" size={22} color="#111111" /> },
-  { label: 'Writing', icon: <MaterialCommunityIcons name="pencil" size={22} color="#111111" /> },
-  { label: 'Speaking', icon: <MaterialCommunityIcons name="account-voice" size={22} color="#111111" /> },
-  { label: 'Flashcard', icon: <MaterialCommunityIcons name="card-text-outline" size={22} color="#111111" /> },
-  { label: 'Ôn từ vựng', icon: <Feather name="clock" size={22} color="#111111" /> },
-  { label: 'Thi thử', icon: <Ionicons name="play" size={22} color="#111111" /> },
-  { label: 'Lịch sử & Sai sót', icon: <MaterialCommunityIcons name="history" size={22} color="#111111" /> }
+  {
+    label: "Listening",
+    icon: <Feather name="headphones" size={22} color="#111111" />,
+  },
+  {
+    label: "Reading",
+    icon: <Ionicons name="book" size={22} color="#111111" />,
+  },
+  {
+    label: "Writing",
+    icon: <MaterialCommunityIcons name="pencil" size={22} color="#111111" />,
+  },
+  {
+    label: "Speaking",
+    icon: (
+      <MaterialCommunityIcons name="account-voice" size={22} color="#111111" />
+    ),
+  },
+  {
+    label: "Flashcard",
+    icon: (
+      <MaterialCommunityIcons
+        name="card-text-outline"
+        size={22}
+        color="#111111"
+      />
+    ),
+  },
+  {
+    label: "Ôn từ vựng",
+    icon: <Feather name="clock" size={22} color="#111111" />,
+  },
+  {
+    label: "Thi thử",
+    icon: <Ionicons name="play" size={22} color="#111111" />,
+  },
+  {
+    label: "Lịch sử & Sai sót",
+    icon: <MaterialCommunityIcons name="history" size={22} color="#111111" />,
+  },
 ];
 
-export function UserHomeScreen({ displayName = 'Linh' }: UserHomeScreenProps) {
+export function UserHomeScreen({
+  displayName = "Linh",
+  onNavigateToExam,
+}: UserHomeScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -40,15 +83,26 @@ export function UserHomeScreen({ displayName = 'Linh' }: UserHomeScreenProps) {
 
         <View style={styles.headerLine} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.greeting}>Hello, {displayName}</Text>
 
           <View style={styles.grid}>
             {topActions.map((action) => (
-              <View key={action.label} style={styles.gridItem}>
+              <TouchableOpacity
+                key={action.label}
+                style={styles.gridItem}
+                onPress={() => {
+                  if (action.label === "Thi thử") {
+                    onNavigateToExam?.();
+                  }
+                }}
+              >
                 <View style={styles.iconTile}>{action.icon}</View>
                 <Text style={styles.gridLabel}>{action.label}</Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </ScrollView>
@@ -72,84 +126,84 @@ export function UserHomeScreen({ displayName = 'Linh' }: UserHomeScreenProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7f7'
+    backgroundColor: "#f5f7f7",
   },
   container: {
     flex: 1,
-    backgroundColor: '#ffffff'
+    backgroundColor: "#ffffff",
   },
   topBar: {
     height: 58,
     backgroundColor: AUTH_ACTION_COLOR,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   avatar: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#d9d9d9'
+    backgroundColor: "#d9d9d9",
   },
   headerLine: {
     height: 1,
-    backgroundColor: '#1d1d1d'
+    backgroundColor: "#1d1d1d",
   },
   scrollContent: {
     paddingHorizontal: 18,
     paddingTop: 14,
-    paddingBottom: 120
+    paddingBottom: 120,
   },
   greeting: {
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     fontSize: 13,
-    color: '#2f2f2f',
-    marginBottom: 38
+    color: "#2f2f2f",
+    marginBottom: 38,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 28
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 28,
   },
   gridItem: {
-    width: '22%',
-    alignItems: 'center'
+    width: "22%",
+    alignItems: "center",
   },
   iconTile: {
     width: 44,
     height: 44,
     borderRadius: 6,
-    backgroundColor: '#e1e1e1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8
+    backgroundColor: "#e1e1e1",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
   },
   gridLabel: {
     fontSize: 11,
-    textAlign: 'center',
-    color: '#111111',
-    lineHeight: 14
+    textAlign: "center",
+    color: "#111111",
+    lineHeight: 14,
   },
   chatButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     bottom: 86,
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#111111',
-    alignItems: 'center',
-    justifyContent: 'center'
+    backgroundColor: "#111111",
+    alignItems: "center",
+    justifyContent: "center",
   },
   bottomNav: {
     height: 54,
     backgroundColor: AUTH_ACTION_COLOR,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.08)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around'
-  }
+    borderTopColor: "rgba(0, 0, 0, 0.08)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+  },
 });
