@@ -187,24 +187,29 @@ model User_answers {
 }
 
 model Flashcard_sets {
-  id              Int      @id @default(autoincrement())
-  owner_user_id   Int?
-  owner_admin_id  Int?
-  title           String
-  description     String?
-  cover_image_url String?
-  visibility      String   @default("PRIVATE")
-  is_system       Boolean  @default(false)
-  status          String   @default("DRAFT")
-  card_count      Int      @default(0)
-  created_at      DateTime @default(now())
-  updated_at      DateTime?
-  deleted_at      DateTime?
+  id                    Int      @id @default(autoincrement())
+  owner_user_id         Int?
+  owner_admin_id        Int?
+  title                 String
+  description           String?
+  cover_image_url       String?
+  visibility            String   @default("PRIVATE")
+  is_system             Boolean  @default(false)
+  status                String   @default("DRAFT")
+  card_count            Int      @default(0)
+  imported_from_set_id  Int?
+  original_owner_id     Int?
+  created_at            DateTime @default(now())
+  updated_at            DateTime?
+  deleted_at            DateTime?
+  warned_at             DateTime?
 
-  user        Users?  @relation(fields: [owner_user_id], references: [id])
-  admin       Admins? @relation(fields: [owner_admin_id], references: [id])
-  flashcards  Flashcards[]
-  saved_by    User_saved_sets[]
+  user               Users?  @relation(fields: [owner_user_id], references: [id])
+  admin              Admins? @relation(fields: [owner_admin_id], references: [id])
+  flashcards         Flashcards[]
+  saved_by           User_saved_sets[]
+  imported_from_set  Flashcard_sets? @relation("ImportedFrom", fields: [imported_from_set_id], references: [id])
+  imported_sets      Flashcard_sets[] @relation("ImportedFrom")
 
   @@map("Flashcard_sets")
 }

@@ -1,10 +1,17 @@
 import express from "express";
 import multer from "multer";
 import {
+  createQuestion,
+  createManualExam,
   getAdminExamList,
   getExamQuestions,
   getQuestionDetail,
   importExamFromExcel,
+  restoreExam,
+  softDeleteExam,
+  updateExam,
+  updateExamStatus,
+  updateQuestionDetail,
 } from "../../controllers/admin/exam.js";
 
 const router = express.Router();
@@ -30,8 +37,15 @@ const upload = multer({
 });
 
 router.get("/", getAdminExamList);
+router.post("/", createManualExam);
 router.get("/:examSetId/questions", getExamQuestions);
+router.post("/:examSetId/questions", createQuestion);
 router.get("/:examSetId/questions/:questionNumber", getQuestionDetail);
+router.patch("/:examSetId", updateExam);
+router.patch("/:examSetId/status", updateExamStatus);
+router.delete("/:examSetId", softDeleteExam);
+router.post("/:examSetId/restore", restoreExam);
+router.patch("/:examSetId/questions/:questionNumber", updateQuestionDetail);
 router.post("/import-excel", upload.single("excelFile"), importExamFromExcel);
 
 export default router;

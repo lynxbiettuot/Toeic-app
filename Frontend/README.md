@@ -43,7 +43,7 @@ ipconfig
 5. Mở file `.env` của frontend và sửa thành:
 
 ```env
-API_BASE_URL=http://192.168.2.114:3000
+API_BASE_URL=http:192.168.2.114:3000
 API_PORT=3000
 ```
 
