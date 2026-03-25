@@ -91,10 +91,10 @@ model Question_groups {
   id           Int    @id @default(autoincrement())
   exam_set_id  Int
   part_number  Int
-  passage_text String?
-  transcript   String?
-  image_url    String?
-  audio_url    String?
+  passage_text String? @db.LongText
+  transcript   String? @db.LongText
+  image_url    String? @db.Text
+  audio_url    String? @db.Text
 
   exam_set     Exam_sets @relation(fields: [exam_set_id], references: [id])
   questions    Questions[]
@@ -107,12 +107,12 @@ model Questions {
   exam_set_id     Int
   part_number     Int
   question_number Int
-  content         String?
-  transcript      String?
-  image_url       String?
-  audio_url       String?
+  content         String? @db.LongText
+  transcript      String? @db.LongText
+  image_url       String? @db.Text
+  audio_url       String? @db.Text
   correct_answer  String
-  explanation     String?
+  explanation     String? @db.LongText
   group_id        Int?
   created_at      DateTime @default(now())
 
@@ -128,7 +128,7 @@ model Answer_options {
   id           Int    @id @default(autoincrement())
   question_id  Int
   option_label String
-  content      String
+  content      String @db.LongText
 
   question     Questions @relation(fields: [question_id], references: [id])
 

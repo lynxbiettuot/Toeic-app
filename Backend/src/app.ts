@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import { prisma } from './lib/prisma.js';
 import authRoutes from './routes/auth.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,24 +24,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   next();
 });
-
-app.get('/', async (_req: Request, res: Response) => {
-  try {
-    const publicExams = await prisma.exam_sets.findMany({
-      where: { status: 'PUBLIC' },
-      select: { id: true, title: true, type: true, total_questions: true }
-    });
-
-    res.status(200).json({
-      message: 'Welcome to TOEIC App API!',
-      data: publicExams
-    });
-  } catch (_error) {
-    res.status(500).json({ message: 'Database connection error' });
-  }
-});
-
+//xác thực
 app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
+
+//route của admin
+
+//route của user
 
 async function startServer() {
   try {
