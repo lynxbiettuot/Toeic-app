@@ -1,7 +1,103 @@
-﻿# Frontend README
+# Frontend README
+
+## Cách chạy nhanh
+
+### Đây là frontend của mobile
+Project `Frontend` là phần giao diện cho ứng dụng TOEIC trên điện thoại, được xây dựng bằng `Expo + React Native`.
+
+Bạn có thể chạy app theo 2 cách:
+- dùng `Expo Go` trên điện thoại thật
+- dùng máy ảo Android Studio
+
+Trong project này, cách nhẹ và dễ nhất là dùng `Expo Go`, không bắt buộc phải cài máy ảo Android Studio.
+
+### 1. Cài dependency
+```bash
+npm install
+```
+
+### 2. Tạo file môi trường
+```bash
+cp .env.example .env
+```
+
+Nếu đang dùng Windows PowerShell, có thể dùng:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+### 3. Cấu hình backend để điện thoại thấy được Giao diện
+Frontend mobile muốn gọi được backend trên điện thoại thì điện thoại phải truy cập được địa chỉ IP LAN của máy tính đang chạy backend.
+
+#### Cách cấu hình
+1. Chạy backend trước ở cổng `3000`.
+2. Đảm bảo điện thoại và máy tính cùng một mạng Wi-Fi.
+3. Lấy IP LAN của máy tính:
+
+```powershell
+ipconfig
+```
+
+4. Tìm dòng `IPv4 Address`, ví dụ `192.168.2.114`.
+5. Mở file `.env` của frontend và sửa thành:
+
+```env
+API_BASE_URL=http://192.168.2.114:3000
+API_PORT=3000
+```
+
+Lưu ý:
+- Thay `192.168.2.114` bằng IP thật của máy bạn.
+- Không dùng `localhost` hoặc `127.0.0.1` khi chạy trên điện thoại thật, vì lúc đó app sẽ hiểu là chính điện thoại.
+- Nếu backend đổi cổng, cập nhật lại cả `API_BASE_URL` và `API_PORT`.
+
+### 4. Cài Expo Go trên điện thoại
+Tải ứng dụng `Expo Go`:
+- Android: cài từ Google Play
+- iPhone: cài từ App Store
+
+### 5. Chạy frontend
+```bash
+npm start
+```
+
+Sau khi chạy, Expo sẽ mở `Metro Bundler` và hiển thị mã QR trong terminal hoặc trên trang Expo Dev Tools.
+
+### 6. Mở app trên Expo Go
+1. Mở `Expo Go` trên điện thoại.
+2. Quét QR code từ terminal hoặc trình duyệt.
+3. App sẽ được load trực tiếp trên điện thoại.
+
+Nếu quét QR nhưng không vào được app:
+- kiểm tra điện thoại và máy tính có cùng Wi-Fi không
+- kiểm tra backend có đang chạy không
+- kiểm tra `API_BASE_URL` đã đúng IP LAN chưa
+- kiểm tra tường lửa Windows có đang chặn cổng `3000` hoặc Expo không
+
+## Cách để thấy frontend trên Expo Go
+
+Project này đã có logic tự suy ra địa chỉ backend từ mạng nội bộ trong file `src/config/api.ts`. Tuy nhiên để ổn định nhất khi chạy trên điện thoại thật, nên cấu hình rõ trong `.env`.
+
+Luồng hoạt động khi dùng Expo Go:
+1. Bạn chạy backend trên máy tính.
+2. Bạn chạy frontend bằng `npm start`.
+3. Expo phát app qua mạng nội bộ.
+4. Điện thoại mở app bằng `Expo Go`.
+5. Frontend đọc `API_BASE_URL` từ `app.config.js`.
+6. Frontend gọi API đến backend qua địa chỉ dạng `http://IP_MAY_TINH:3000`.
+7. Giao diện mobile hiển thị trên điện thoại.
+
+## Khi nào cần Android Studio
+Bạn chỉ cần Android Studio nếu:
+- muốn chạy máy ảo Android
+- muốn test sâu hơn với emulator
+- muốn build native hoặc debug các vấn đề đặc thù Android
+
+Nếu mục tiêu hiện tại chỉ là xem và test frontend mobile nhanh, `Expo Go` là đủ.
 
 ## Tổng quan
-Đây là frontend mobile được xây dựng bằng Expo + React Native. Các file trong `src` được tổ chức theo từng nhóm chức năng để dễ quản lý, dễ mở rộng và tách riêng giao diện, logic và cấu hình.
+Đây là frontend mobile được xây dựng bằng `Expo + React Native`. Các file trong `src` được tổ chức theo từng nhóm chức năng để dễ quản lý, dễ mở rộng và tách riêng giao diện, logic và cấu hình.
 
 ## Cấu trúc thư mục trong `src`
 
