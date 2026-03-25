@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { prisma } from './lib/prisma.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import flashcardRoutes from './routes/flashcard.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,6 +28,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 //xác thực
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/flashcards', flashcardRoutes);
 
 //route của admin
 
