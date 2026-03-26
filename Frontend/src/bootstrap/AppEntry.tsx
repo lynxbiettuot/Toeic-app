@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { AuthScreen } from '../features/auth/screens/AuthScreen';
 import { UserHomeScreen } from '../features/user/screens/UserHomeScreen';
 import { ExamListScreen } from '../features/exam/screens/ExamListScreen';
 import { ExamIntroScreen } from '../features/exam/screens/ExamIntroScreen';
 import { ExamTestScreen } from '../features/exam/screens/ExamTestScreen';
 import { ExamResultScreen } from '../features/exam/screens/ExamResultScreen';
+import { ExamSessionPartsScreen } from '../features/exam/screens/ExamSessionPartsScreen';
+import { ExamSessionPartQuestionsScreen } from '../features/exam/screens/ExamSessionPartQuestionsScreen';
+import { ExamQuestionDetailScreen } from '../features/exam/screens/ExamQuestionDetailScreen';
 import { FlashcardLibraryScreen } from '../features/flashcard/screens/FlashcardLibraryScreen';
 import { FlashcardSetDetailScreen } from '../features/flashcard/screens/FlashcardSetDetailScreen';
 import { SpacedReviewScreen } from '../features/flashcard/screens/SpacedReviewScreen';
@@ -19,6 +22,9 @@ type ScreenState =
   | 'exam-intro' 
   | 'exam-test' 
   | 'exam-result'
+  | 'exam-session-parts'
+  | 'exam-session-part-questions'
+  | 'exam-question-detail'
   | 'flashcard-library'
   | 'flashcard-detail'
   | 'spaced-review'
@@ -35,19 +41,29 @@ export function AppEntry() {
 
   const navigationShim = {
     navigate: (screenName: string, params?: any) => {
-      if (params) setExamParams(params);
+      if (params) setExamParams((prev) => ({ ...prev, ...params }));
       if (screenName === 'ExamIntroScreen') setScreen('exam-intro');
       if (screenName === 'ExamListScreen') setScreen('exam-list');
       if (screenName === 'ExamResultScreen') setScreen('exam-result');
+      if (screenName === 'ExamSessionPartsScreen') setScreen('exam-session-parts');
+      if (screenName === 'ExamSessionPartQuestionsScreen') setScreen('exam-session-part-questions');
+      if (screenName === 'ExamQuestionDetailScreen') setScreen('exam-question-detail');
     },
     replace: (screenName: string, params?: any) => {
-      if (params) setExamParams(params);
+      if (params) setExamParams((prev) => ({ ...prev, ...params }));
       if (screenName === 'ExamTestScreen') setScreen('exam-test');
       if (screenName === 'ExamResultScreen') setScreen('exam-result');
+      if (screenName === 'ExamSessionPartsScreen') setScreen('exam-session-parts');
+      if (screenName === 'ExamSessionPartQuestionsScreen') setScreen('exam-session-part-questions');
+      if (screenName === 'ExamQuestionDetailScreen') setScreen('exam-question-detail');
     },
     goBack: () => {
       if (screen === 'exam-intro') setScreen('exam-list');
       if (screen === 'exam-test') setScreen('exam-list');
+      if (screen === 'exam-result') setScreen('exam-test');
+      if (screen === 'exam-session-parts') setScreen('exam-result');
+      if (screen === 'exam-session-part-questions') setScreen('exam-session-parts');
+      if (screen === 'exam-question-detail') setScreen('exam-session-part-questions');
     }
   };
 
@@ -110,6 +126,18 @@ export function AppEntry() {
     return <ExamResultScreen navigation={navigationShim} route={{ params: examParams }} />;
   }
 
+  if (screen === 'exam-session-parts') {
+    return <ExamSessionPartsScreen navigation={navigationShim} route={{ params: examParams }} />;
+  }
+
+  if (screen === 'exam-session-part-questions') {
+    return <ExamSessionPartQuestionsScreen navigation={navigationShim} route={{ params: examParams }} />;
+  }
+
+  if (screen === 'exam-question-detail') {
+    return <ExamQuestionDetailScreen navigation={navigationShim} route={{ params: examParams }} />;
+  }
+
   if (screen === 'exam-test') {
     return <ExamTestScreen navigation={navigationShim} route={{ params: examParams }} />;
   }
@@ -149,3 +177,5 @@ export function AppEntry() {
     />
   );
 }
+
+
