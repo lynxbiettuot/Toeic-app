@@ -18,6 +18,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@google/genai": "^1.46.0",
     "@prisma/adapter-mariadb": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@types/multer": "^2.1.0",

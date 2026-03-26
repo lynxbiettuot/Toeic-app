@@ -44,6 +44,13 @@ export function ExamTestScreen({ navigation, route }: any) {
   const [durationMillis, setDurationMillis] = useState(0);
   const currentAudioUrlRef = useRef<string | null>(null);
 
+  const splitPipeSeparatedImages = (value: string | null | undefined) =>
+    (value ?? "")
+      .split("|")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+
   useEffect(() => {
     fetch(`${API_BASE_URL}/exams/${examId}/questions`)
       .then((res) => res.json())
@@ -106,6 +113,9 @@ export function ExamTestScreen({ navigation, route }: any) {
   const currentPage = pages[currentPageIndex] || [];
   const firstQ = currentPage[0];
   const nextAudioUrl = firstQ?.group?.audio_url || firstQ?.audio_url || null;
+  const questionImages = Array.isArray(firstQ?.image_urls)
+    ? firstQ.image_urls.slice(0, 3)
+    : splitPipeSeparatedImages(firstQ?.image_url || firstQ?.group?.image_url || null);
 
   useEffect(() => {
     let isMounted = true;
@@ -208,7 +218,11 @@ export function ExamTestScreen({ navigation, route }: any) {
       const data = await res.json();
       
       if (data.statusCode === 200) {
-        navigation.replace('ExamResultScreen', { result: data.data });
+        navigation.replace('ExamResultScreen', {
+          result: data.data,
+          examId,
+          sessionId,
+        });
       } else {
         Alert.alert("Lỗi", "Không thể nộp bài.");
         setSubmitting(false);
@@ -344,12 +358,17 @@ export function ExamTestScreen({ navigation, route }: any) {
 
         <ScrollView style={styles.questionArea} contentContainerStyle={{ padding: 16 }}>
           {/* Shared Context for the Page (Image & Passage) */}
-          {(firstQ?.group?.image_url || firstQ?.image_url) && (
-            <Image 
-              source={{ uri: firstQ?.image_url || firstQ?.group?.image_url }} 
-              style={styles.questionImage} 
-              resizeMode="contain" 
-            />
+          {questionImages.length > 0 && (
+            <View style={styles.questionImageStack}>
+              {questionImages.map((imageUrl: string, index: number) => (
+                <Image
+                  key={`${imageUrl}-${index}`}
+                  source={{ uri: imageUrl }}
+                  style={styles.questionImage}
+                  resizeMode="contain"
+                />
+              ))}
+            </View>
           )}
 
           {firstQ?.group?.passage_text && (
@@ -516,6 +535,10 @@ const styles = StyleSheet.create({
   questionContent: { fontSize: 16, fontWeight: "600", marginBottom: 16, color: "#111" },
   questionContentAudioFallback: { fontSize: 16, fontWeight: "600", marginBottom: 16, color: "#888", fontStyle: "italic" },
   questionImage: { width: "100%", height: 200, marginBottom: 16, borderRadius: 8, backgroundColor: "#f0f0f0" },
+  questionImageStack: {
+    gap: 12,
+    marginBottom: 16,
+  },
 
   optionsList: { gap: 12 },
   optionItem: {

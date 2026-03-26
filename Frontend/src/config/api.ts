@@ -24,6 +24,7 @@ const extractHostFromUri = (value?: string | null) => {
 
   const hostWithPort = value.replace(/^[a-z]+:\/\//i, '').split('/')[0]?.trim();
   const host = hostWithPort?.split(':')[0]?.trim();
+  console.log(host)
 
   if (!host || ['localhost', '127.0.0.1', '0.0.0.0'].includes(host)) {
     return null;
