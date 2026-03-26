@@ -40,7 +40,7 @@ npm start
 ```
 
 Lưu ý:
-- Không chạy phần Gemini nếu chưa có `GEMINI_API_KEY`.
+- Không chạy phần Gemini nếu chưa có `GEMINI_API_KEY`.API key anh em lấy ở địa chỉ này `https://ai.google.dev/gemini-api/docs/quickstart?hl=vi#before_you_begin`
 - Nếu vừa pull code mới về mà Prisma schema thay đổi, hãy migrate lại trước khi test API.
 - Các file build `.js`, `.d.ts`, `.map` không phải source thật, không cần sửa tay.
 
