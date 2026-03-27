@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
-import { getPublicFlashcardSetDetail, importFlashcardSet } from '../services/flashcardService';
-import type { PublicFlashcardCard, PublicFlashcardSet } from '../types/flashcard';
+import { getPublicFlashcardSetDetail, importFlashcardSet } from '../services';
+import type { PublicFlashcardCard, PublicFlashcardSet } from '../types';
 
 type PublicSetDetailScreenProps = {
   setId: number;
@@ -109,54 +109,42 @@ export function PublicSetDetailScreen({
         <View style={styles.iconButton} />
       </View>
 
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.content}>
         <View style={styles.headerBox}>
           <Text style={styles.title}>{set.title}</Text>
           <Text style={styles.author}>👤 {set.authorName}</Text>
           <Text style={styles.meta}>
             📚 {set.cardCount} thẻ • 🔥 {set.savedCount} lần lưu
           </Text>
-          {set.description && (
-            <Text style={styles.description}>{set.description}</Text>
-          )}
+          {set.description ? <Text style={styles.description}>{set.description}</Text> : null}
         </View>
 
-        <View style={styles.previewBox}>
-          <Text style={styles.previewTitle}>Xem trước ({Math.min(3, cards.length)} thẻ)</Text>
+        <Text style={styles.sectionTitle}>Danh sách từ vựng</Text>
 
-          {cards.slice(0, 3).map((card, index) => (
-            <View key={card.id} style={styles.cardPreview}>
-              <View style={styles.cardNumber}>
-                <Text style={styles.cardNumberText}>{index + 1}</Text>
-              </View>
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardWord}>{card.word}</Text>
-                {card.pronunciation && (
-                  <Text style={styles.cardPronunciation}>{card.pronunciation}</Text>
-                )}
-                <Text style={styles.cardDefinition} numberOfLines={2}>
-                  {card.definition}
-                </Text>
-              </View>
+        <FlatList
+          data={cards}
+          keyExtractor={(item) => `${item.id}`}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <View style={styles.cardItem}>
+              <Text style={styles.wordText}>{item.word}</Text>
+              <Text style={styles.cardLine}>Phiên âm: {item.pronunciation || '-'}</Text>
+              <Text style={styles.cardLine}>Định nghĩa: {item.definition}</Text>
+              <Text style={styles.cardLine}>Ví dụ: {item.example || '-'}</Text>
             </View>
-          ))}
+          )}
+          ListEmptyComponent={<Text style={styles.emptyText}>Bộ từ này chưa có flashcard.</Text>}
+        />
 
-          <Text style={styles.moreText}>
-            ... và {Math.max(0, cards.length - 3)} thẻ khác
-          </Text>
-        </View>
-
-        {message && message.includes('✅') && (
+        {message && message.includes('✅') ? (
           <View style={styles.successBox}>
             <Ionicons name="checkmark-circle" size={24} color="#12b76a" />
             <Text style={styles.successText}>{message}</Text>
           </View>
-        )}
+        ) : null}
 
-        {message && !message.includes('✅') && (
-          <Text style={styles.errorMsg}>{message}</Text>
-        )}
-      </ScrollView>
+        {message && !message.includes('✅') ? <Text style={styles.errorMsg}>{message}</Text> : null}
+      </View>
 
       <View style={styles.footer}>
         <Pressable
@@ -190,7 +178,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: { fontSize: 17, color: '#111', fontWeight: '700' },
   iconButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  container: { flex: 1, paddingHorizontal: 16, paddingTop: 12 },
+  content: { flex: 1, paddingHorizontal: 16, paddingTop: 12 },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   headerBox: {
     backgroundColor: '#fff',
@@ -202,35 +190,19 @@ const styles = StyleSheet.create({
   author: { fontSize: 14, color: '#666', marginBottom: 8 },
   meta: { fontSize: 12, color: '#999', marginBottom: 8 },
   description: { fontSize: 13, color: '#555', lineHeight: 18 },
-  previewBox: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 12
+  sectionTitle: { fontSize: 19, fontWeight: '700', color: '#1f1f1f', marginBottom: 12 },
+  listContent: { paddingBottom: 12, gap: 10 },
+  cardItem: {
+    borderWidth: 1,
+    borderColor: '#d7d7d7',
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+    backgroundColor: '#fff'
   },
-  previewTitle: { fontSize: 14, fontWeight: '600', color: '#111', marginBottom: 10 },
-  cardPreview: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0'
-  },
-  cardNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: AUTH_ACTION_COLOR,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  cardNumberText: { color: '#fff', fontWeight: '600', fontSize: 12 },
-  cardInfo: { flex: 1 },
-  cardWord: { fontSize: 14, fontWeight: '600', color: '#111', marginBottom: 4 },
-  cardPronunciation: { fontSize: 12, color: '#666', marginBottom: 4 },
-  cardDefinition: { fontSize: 12, color: '#555', lineHeight: 16 },
-  moreText: { fontSize: 12, color: '#999', fontStyle: 'italic', textAlign: 'center', marginTop: 8 },
+  wordText: { fontSize: 17, fontWeight: '700', color: '#1f1f1f' },
+  cardLine: { fontSize: 13, color: '#4f4f4f' },
+  emptyText: { textAlign: 'center', marginTop: 22, color: '#666' },
   successBox: {
     flexDirection: 'row',
     alignItems: 'center',

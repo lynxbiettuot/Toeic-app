@@ -4,13 +4,13 @@ import {
   Alert,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
 import {
@@ -18,16 +18,18 @@ import {
   deleteFlashcardSet,
   getFlashcardSets,
   updateFlashcardSet
-} from '../services/flashcardService';
+} from '../services';
 import { FlashcardFooterNav } from '../components/FlashcardFooterNav';
-import type { FlashcardSet, VisibilityMode } from '../types/flashcard';
+import { DiscoveryScreen } from './DiscoveryScreen';
+import type { FlashcardSet, PublicFlashcardSet, VisibilityMode } from '../types';
 
 type FlashcardLibraryScreenProps = {
   userId: number;
+  defaultTab?: 'my' | 'discover';
   onBack: () => void;
   onOpenSet: (setItem: FlashcardSet) => void;
+  onOpenPublicSet: (setItem: PublicFlashcardSet) => void;
   onGoHome: () => void;
-  onOpenDiscovery: () => void;
 };
 
 type SetFormState = {
@@ -44,10 +46,11 @@ const EMPTY_FORM: SetFormState = {
 
 export function FlashcardLibraryScreen({
   userId,
+  defaultTab = 'my',
   onBack,
   onOpenSet,
-  onGoHome,
-  onOpenDiscovery
+  onOpenPublicSet,
+  onGoHome
 }: FlashcardLibraryScreenProps) {
   const [sets, setSets] = useState<FlashcardSet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +59,8 @@ export function FlashcardLibraryScreen({
   const [submitting, setSubmitting] = useState(false);
   const [editingSet, setEditingSet] = useState<FlashcardSet | null>(null);
   const [formState, setFormState] = useState<SetFormState>(EMPTY_FORM);
-  const [activeTab, setActiveTab] = useState<'my' | 'discover'>('my');
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'my' | 'discover'>(defaultTab);
 
   const modalTitle = useMemo(() => (editingSet ? 'Sửa bộ từ vựng' : 'Tạo list từ'), [editingSet]);
 
@@ -81,6 +85,7 @@ export function FlashcardLibraryScreen({
   const openCreateModal = () => {
     setEditingSet(null);
     setFormState(EMPTY_FORM);
+    setModalError(null);
     setModalVisible(true);
   };
 
@@ -91,6 +96,7 @@ export function FlashcardLibraryScreen({
       description: setItem.description ?? '',
       visibility: setItem.visibility
     });
+    setModalError(null);
     setModalVisible(true);
   };
 
@@ -99,15 +105,17 @@ export function FlashcardLibraryScreen({
       setModalVisible(false);
       setEditingSet(null);
       setFormState(EMPTY_FORM);
+      setModalError(null);
     }
   };
 
   const saveSet = async () => {
     if (!formState.title.trim()) {
-      setMessage('Tiêu đề bộ từ vựng không được để trống.');
+      setModalError('Tiêu đề bộ từ vựng không được để trống.');
       return;
     }
 
+    setModalError(null);
     setSubmitting(true);
 
     try {
@@ -174,18 +182,15 @@ export function FlashcardLibraryScreen({
               onPress={() => setActiveTab('my')}
             >
               <Text style={[styles.tabText, activeTab === 'my' && styles.tabTextActive]}>
-                📚 Của tôi
+                Của tôi
               </Text>
             </Pressable>
             <Pressable
               style={[styles.tab, activeTab === 'discover' && styles.tabActive]}
-              onPress={() => {
-                setActiveTab('discover');
-                onOpenDiscovery();
-              }}
+              onPress={() => setActiveTab('discover')}
             >
               <Text style={[styles.tabText, activeTab === 'discover' && styles.tabTextActive]}>
-                🌍 Khám phá
+                Khám phá
               </Text>
             </Pressable>
           </View>
@@ -232,7 +237,13 @@ export function FlashcardLibraryScreen({
                 </ScrollView>
               )}
             </>
-          ) : null}
+          ) : (
+            <DiscoveryScreen
+              embedded
+              userId={userId}
+              onViewDetail={onOpenPublicSet}
+            />
+          )}
         </View>
 
         <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={closeModal}>
@@ -244,7 +255,12 @@ export function FlashcardLibraryScreen({
               <TextInput
                 value={formState.title}
                 style={styles.input}
-                onChangeText={(value) => setFormState((prev) => ({ ...prev, title: value }))}
+                onChangeText={(value) => {
+                  if (modalError) {
+                    setModalError(null);
+                  }
+                  setFormState((prev) => ({ ...prev, title: value }));
+                }}
                 placeholder="Ví dụ: Từ vựng ETS 2026 - Test 1"
               />
 
@@ -252,7 +268,12 @@ export function FlashcardLibraryScreen({
               <TextInput
                 value={formState.description}
                 style={[styles.input, styles.multilineInput]}
-                onChangeText={(value) => setFormState((prev) => ({ ...prev, description: value }))}
+                onChangeText={(value) => {
+                  if (modalError) {
+                    setModalError(null);
+                  }
+                  setFormState((prev) => ({ ...prev, description: value }));
+                }}
                 multiline
                 placeholder="List gồm những từ vựng quan trọng..."
               />
@@ -261,17 +282,29 @@ export function FlashcardLibraryScreen({
               <View style={styles.modeRow}>
                 <Pressable
                   style={[styles.modeButton, formState.visibility === 'PRIVATE' && styles.modeButtonActive]}
-                  onPress={() => setFormState((prev) => ({ ...prev, visibility: 'PRIVATE' }))}
+                  onPress={() => {
+                    if (modalError) {
+                      setModalError(null);
+                    }
+                    setFormState((prev) => ({ ...prev, visibility: 'PRIVATE' }));
+                  }}
                 >
                   <Text style={styles.modeText}>Private</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.modeButton, formState.visibility === 'PUBLIC' && styles.modeButtonActive]}
-                  onPress={() => setFormState((prev) => ({ ...prev, visibility: 'PUBLIC' }))}
+                  onPress={() => {
+                    if (modalError) {
+                      setModalError(null);
+                    }
+                    setFormState((prev) => ({ ...prev, visibility: 'PUBLIC' }));
+                  }}
                 >
                   <Text style={styles.modeText}>Public</Text>
                 </Pressable>
               </View>
+
+              {modalError && <Text style={styles.modalErrorText}>{modalError}</Text>}
 
               <View style={styles.modalActionRow}>
                 <Pressable style={styles.cancelBtn} onPress={closeModal}>
@@ -364,7 +397,7 @@ const styles = StyleSheet.create({
   tabActive: {
     borderBottomColor: AUTH_ACTION_COLOR
   },
-  tabText: { fontSize: 14, color: '#999', fontWeight: '500' },
+  tabText: { fontSize: 14, color: '#111', fontWeight: '500' },
   tabTextActive: { color: AUTH_ACTION_COLOR, fontWeight: '700' },
   modalBackdrop: {
     flex: 1,
@@ -405,6 +438,7 @@ const styles = StyleSheet.create({
   },
   modeButtonActive: { backgroundColor: '#d9f6f3', borderColor: AUTH_ACTION_COLOR },
   modeText: { color: '#1f1f1f', fontWeight: '600' },
+  modalErrorText: { color: '#b42318', marginBottom: 10, fontSize: 13 },
   modalActionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelBtn: {
     height: 38,
