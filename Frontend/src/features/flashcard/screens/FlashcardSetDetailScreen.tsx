@@ -4,13 +4,13 @@ import {
   Alert,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
 import {
@@ -18,9 +18,9 @@ import {
   deleteFlashcard,
   getFlashcardsBySet,
   updateFlashcard
-} from '../services/flashcardService';
+} from '../services';
 import { FlashcardFooterNav } from '../components/FlashcardFooterNav';
-import type { Flashcard, FlashcardSet } from '../types/flashcard';
+import type { Flashcard, FlashcardSet } from '../types';
 
 type FlashcardSetDetailScreenProps = {
   userId: number;
@@ -58,6 +58,7 @@ export function FlashcardSetDetailScreen({
   const [submitting, setSubmitting] = useState(false);
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
   const [formState, setFormState] = useState<FlashcardFormState>(EMPTY_FORM);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const modalTitle = useMemo(() => (editingCard ? 'Sửa flashcard' : 'Tạo flashcard'), [editingCard]);
 
@@ -82,6 +83,7 @@ export function FlashcardSetDetailScreen({
   const openCreateModal = () => {
     setEditingCard(null);
     setFormState(EMPTY_FORM);
+    setModalError(null);
     setModalVisible(true);
   };
 
@@ -94,6 +96,7 @@ export function FlashcardSetDetailScreen({
       definition: card.definition,
       example: card.example ?? ''
     });
+    setModalError(null);
     setModalVisible(true);
   };
 
@@ -102,15 +105,17 @@ export function FlashcardSetDetailScreen({
       setModalVisible(false);
       setEditingCard(null);
       setFormState(EMPTY_FORM);
+      setModalError(null);
     }
   };
 
   const saveCard = async () => {
     if (!formState.word.trim() || !formState.definition.trim()) {
-      setMessage('Từ vựng và định nghĩa là bắt buộc.');
+      setModalError('Từ vựng và định nghĩa là bắt buộc.');
       return;
     }
 
+    setModalError(null);
     setSubmitting(true);
 
     try {
@@ -217,7 +222,12 @@ export function FlashcardSetDetailScreen({
               <TextInput
                 value={formState.word}
                 style={styles.input}
-                onChangeText={(value) => setFormState((prev) => ({ ...prev, word: value }))}
+                onChangeText={(value) => {
+                  if (modalError) {
+                    setModalError(null);
+                  }
+                  setFormState((prev) => ({ ...prev, word: value }));
+                }}
                 placeholder="Accommodation"
               />
 
@@ -225,7 +235,12 @@ export function FlashcardSetDetailScreen({
               <TextInput
                 value={formState.wordType}
                 style={styles.input}
-                onChangeText={(value) => setFormState((prev) => ({ ...prev, wordType: value }))}
+                onChangeText={(value) => {
+                  if (modalError) {
+                    setModalError(null);
+                  }
+                  setFormState((prev) => ({ ...prev, wordType: value }));
+                }}
                 placeholder="Noun"
               />
 
@@ -233,7 +248,12 @@ export function FlashcardSetDetailScreen({
               <TextInput
                 value={formState.pronunciation}
                 style={styles.input}
-                onChangeText={(value) => setFormState((prev) => ({ ...prev, pronunciation: value }))}
+                onChangeText={(value) => {
+                  if (modalError) {
+                    setModalError(null);
+                  }
+                  setFormState((prev) => ({ ...prev, pronunciation: value }));
+                }}
                 placeholder="/əˌkɑːməˈdeɪʃn/"
               />
 
@@ -241,7 +261,12 @@ export function FlashcardSetDetailScreen({
               <TextInput
                 value={formState.definition}
                 style={styles.input}
-                onChangeText={(value) => setFormState((prev) => ({ ...prev, definition: value }))}
+                onChangeText={(value) => {
+                  if (modalError) {
+                    setModalError(null);
+                  }
+                  setFormState((prev) => ({ ...prev, definition: value }));
+                }}
                 placeholder="Nơi ở hoặc chỗ lưu trú"
               />
 
@@ -249,10 +274,17 @@ export function FlashcardSetDetailScreen({
               <TextInput
                 value={formState.example}
                 style={[styles.input, styles.multilineInput]}
-                onChangeText={(value) => setFormState((prev) => ({ ...prev, example: value }))}
+                onChangeText={(value) => {
+                  if (modalError) {
+                    setModalError(null);
+                  }
+                  setFormState((prev) => ({ ...prev, example: value }));
+                }}
                 multiline
                 placeholder="The hotel provides comfortable accommodation."
               />
+
+              {modalError && <Text style={styles.modalErrorText}>{modalError}</Text>}
 
               <View style={styles.modalActionRow}>
                 <Pressable style={styles.cancelBtn} onPress={closeModal}>
@@ -363,6 +395,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     paddingTop: 10
   },
+  modalErrorText: { color: '#b42318', marginBottom: 10, fontSize: 13 },
   modalActionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelBtn: {
     height: 38,

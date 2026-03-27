@@ -9,29 +9,34 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
-import { getDueReviewCards, getTodayReviewStats, rateReviewCard } from '../services/flashcardService';
+import { getDueReviewCards, getTodayReviewStats, rateReviewCard, getAllUserFlashcards } from '../services';
 import { FlashcardFooterNav } from '../components/FlashcardFooterNav';
-import type { ReviewFlashcard, ReviewRating } from '../types/flashcard';
+import type { ReviewFlashcard, ReviewRating } from '../types';
 
 type SpacedReviewScreenProps = {
   userId: number;
   onBackHome: () => void;
 };
 
+type PracticeMode = 'review' | 'extra';
+
 const RATING_BUTTONS: Array<{ rating: ReviewRating; label: string; color: string }> = [
-  { rating: 'FORGOT', label: 'Quên', color: '#f04438' },
-  { rating: 'HARD', label: 'Khó', color: '#f79009' },
-  { rating: 'GOOD', label: 'Được', color: '#12b76a' },
-  { rating: 'EASY', label: 'Dễ', color: '#1570ef' }
+  { rating: 'FORGOT', label: 'Quên', color: '#d92d20' },
+  { rating: 'HARD', label: 'Khó', color: '#f98316' },
+  { rating: 'GOOD', label: 'Được', color: '#16a34a' },
+  { rating: 'EASY', label: 'Dễ', color: AUTH_ACTION_COLOR }
 ];
 
 export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenProps) {
+  const [allCards, setAllCards] = useState<ReviewFlashcard[]>([]);
   const [cards, setCards] = useState<ReviewFlashcard[]>([]);
+  const [mode, setMode] = useState<PracticeMode>('review');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showBack, setShowBack] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [reviewedToday, setReviewedToday] = useState(0);
+  const [dueCount, setDueCount] = useState(0);
 
   const activeCard = useMemo(() => cards[0] ?? null, [cards]);
 
@@ -56,8 +61,11 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
         getDueReviewCards(userId),
         getTodayReviewStats(userId)
       ]);
+      setAllCards(dueData.cards);
       setCards(shuffleCards(dueData.cards));
+      setMode('review');
       setReviewedToday(statsData.reviewedCount);
+      setDueCount(dueData.dueCount);
       setShowBack(false);
       setMessage(null);
     } catch (error) {
@@ -79,14 +87,41 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
     setSubmitting(true);
 
     try {
-      await rateReviewCard(activeCard.id, userId, rating);
+      // Only update SRS in 'review' mode; skip in 'extra' mode
+      if (mode === 'review') {
+        const result = await rateReviewCard(activeCard.id, userId, rating);
+        setDueCount(result.dueCount);
+      }
       setCards((prev) => prev.slice(1));
-      setReviewedToday((prev) => prev + 1);
+      if (mode === 'review') {
+        setReviewedToday((prev) => prev + 1);
+      }
       setShowBack(false);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Không thể lưu đánh giá.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const startExtraPractice = async () => {
+    setLoading(true);
+    try {
+      const allUserCards = await getAllUserFlashcards(userId);
+      if (allUserCards.length === 0) {
+        setMessage('Không có thẻ nào để luyện tập.');
+        setLoading(false);
+        return;
+      }
+      setAllCards(allUserCards);
+      setCards(shuffleCards(allUserCards));
+      setMode('extra');
+      setShowBack(false);
+      setMessage(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Không thể tải các thẻ flashcard.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -104,7 +139,9 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.topBar}>
-          <View style={styles.iconButton} />
+          <Pressable onPress={onBackHome} style={styles.iconButton}>
+            <Ionicons name="arrow-back" size={22} color="#111" />
+          </Pressable>
           <Text style={styles.topBarTitle}>Ôn từ vựng</Text>
           <View style={styles.iconButton} />
         </View>
@@ -112,6 +149,13 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
         <View style={styles.completeWrap}>
           <Text style={styles.completeTitle}>Bạn đã hoàn thành toàn bộ từ vựng cần ôn tập ngày hôm nay!</Text>
           <Text style={styles.completeSubTitle}>Bạn đã ôn {reviewedToday} thẻ trong hôm nay.</Text>
+          
+          {mode === 'review' && (
+            <Pressable style={[styles.backHomeBtn, { marginBottom: 12 }]} onPress={startExtraPractice} disabled={loading}>
+              <Text style={styles.backHomeBtnText}>{loading ? 'Đang chờ...' : 'Tiếp tục luyện tập thêm'}</Text>
+            </Pressable>
+          )}
+          
           <Pressable style={styles.backHomeBtn} onPress={onBackHome}>
             <Text style={styles.backHomeBtnText}>Về trang chủ</Text>
           </Pressable>
@@ -133,13 +177,12 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
       </View>
 
       <View style={styles.container}>
-        <Text style={styles.progressText}>Còn lại {cards.length} thẻ đến hạn</Text>
-        <Text style={styles.progressText}>Đã ôn hôm nay: {reviewedToday} thẻ</Text>
-
-        <Pressable style={styles.shuffleBtn} onPress={() => setCards((prev) => shuffleCards(prev))}>
-          <Ionicons name="shuffle" size={16} color="#fff" />
-          <Text style={styles.shuffleBtnText}>Xáo trộn thẻ</Text>
-        </Pressable>
+        {mode === 'review' && (
+          <>
+            <Text style={styles.progressText}>Còn lại {dueCount} thẻ đến hạn</Text>
+            <Text style={styles.progressText}>Đã ôn hôm nay: {reviewedToday} thẻ</Text>
+          </>
+        )}
 
         {message && <Text style={styles.errorText}>{message}</Text>}
 
@@ -202,18 +245,6 @@ const styles = StyleSheet.create({
   },
   container: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
   progressText: { fontSize: 13, color: '#555', marginBottom: 10 },
-  shuffleBtn: {
-    alignSelf: 'flex-start',
-    height: 34,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    backgroundColor: AUTH_ACTION_COLOR,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 10
-  },
-  shuffleBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   errorText: { color: '#b42318', marginBottom: 10, fontSize: 13 },
   cardBox: {
     backgroundColor: '#fff',

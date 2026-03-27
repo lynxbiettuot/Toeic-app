@@ -1,20 +1,20 @@
 import express from 'express';
 import {
-  createFlashcard,
-  createFlashcardSet,
-  deleteFlashcard,
-  deleteFlashcardSet,
-  getDueReviewCards,
-  getFlashcardsBySet,
-  getTodayReviewStats,
   getUserFlashcardSets,
-  rateReviewCard,
-  updateFlashcard,
+  createFlashcardSet,
   updateFlashcardSet,
+  deleteFlashcardSet,
+  getFlashcardsBySet,
+  createFlashcard,
+  updateFlashcard,
+  deleteFlashcard,
+  getDueReviewCards,
+  getTodayReviewStats,
+  rateReviewCard,
   getPublicFlashcardSets,
   getPublicFlashcardSetDetail,
   importFlashcardSet
-} from '../controllers/flashcard/flashcard.js';
+} from '../controllers/flashcard/index.js';
 
 const router = express.Router();
 

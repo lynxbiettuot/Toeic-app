@@ -13,7 +13,7 @@ import { FlashcardSetDetailScreen } from '../features/flashcard/screens/Flashcar
 import { SpacedReviewScreen } from '../features/flashcard/screens/SpacedReviewScreen';
 import { DiscoveryScreen } from '../features/flashcard/screens/DiscoveryScreen';
 import { PublicSetDetailScreen } from '../features/flashcard/screens/PublicSetDetailScreen';
-import type { FlashcardSet, PublicFlashcardSet } from '../features/flashcard/types/flashcard';
+import type { FlashcardSet, PublicFlashcardSet } from '../features/flashcard/types';
 
 type ScreenState = 
   | 'auth' 
@@ -35,6 +35,7 @@ export function AppEntry() {
   const [screen, setScreen] = useState<ScreenState>('auth');
   const [displayName, setDisplayName] = useState('Linh');
   const [userId, setUserId] = useState(1);
+  const [flashcardTab, setFlashcardTab] = useState<'my' | 'discover'>('my');
   const [examParams, setExamParams] = useState<any>({});
   const [selectedSet, setSelectedSet] = useState<FlashcardSet | null>(null);
   const [selectedPublicSet, setSelectedPublicSet] = useState<PublicFlashcardSet | null>(null);
@@ -72,8 +73,12 @@ export function AppEntry() {
       <PublicSetDetailScreen
         setId={selectedPublicSet.id}
         userId={userId}
-        onBack={() => setScreen('discovery')}
+        onBack={() => {
+          setFlashcardTab('discover');
+          setScreen('flashcard-library');
+        }}
         onImportSuccess={() => {
+          setFlashcardTab('my');
           setScreen('flashcard-library');
         }}
       />
@@ -83,6 +88,7 @@ export function AppEntry() {
   if (screen === 'discovery') {
     return (
       <DiscoveryScreen
+        userId={userId}
         onBack={() => setScreen('flashcard-library')}
         onViewDetail={(publicSet) => {
           setSelectedPublicSet(publicSet);
@@ -107,13 +113,18 @@ export function AppEntry() {
     return (
       <FlashcardLibraryScreen
         userId={userId}
+        defaultTab={flashcardTab}
         onBack={() => setScreen('home')}
         onGoHome={() => setScreen('home')}
         onOpenSet={(setItem) => {
           setSelectedSet(setItem);
           setScreen('flashcard-detail');
         }}
-        onOpenDiscovery={() => setScreen('discovery')}
+        onOpenPublicSet={(publicSet) => {
+          setFlashcardTab('discover');
+          setSelectedPublicSet(publicSet);
+          setScreen('public-detail');
+        }}
       />
     );
   }
@@ -155,7 +166,10 @@ export function AppEntry() {
       <UserHomeScreen
         displayName={displayName}
         onNavigateToExam={() => setScreen('exam-list')}
-        onOpenFlashcard={() => setScreen('flashcard-library')}
+        onOpenFlashcard={() => {
+          setFlashcardTab('my');
+          setScreen('flashcard-library');
+        }}
         onOpenVocabularyReview={() => setScreen('spaced-review')}
       />
     );

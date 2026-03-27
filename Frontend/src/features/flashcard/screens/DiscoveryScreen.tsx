@@ -3,26 +3,29 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
-import { getPublicFlashcardSets } from '../services/flashcardService';
-import type { PublicFlashcardSet } from '../types/flashcard';
+import { getPublicFlashcardSets } from '../services';
+import type { PublicFlashcardSet } from '../types';
 
 type DiscoveryScreenProps = {
-  onBack: () => void;
+  userId: number;
+  embedded?: boolean;
+  onBack?: () => void;
   onViewDetail: (set: PublicFlashcardSet) => void;
 };
 
-export function DiscoveryScreen({ onBack, onViewDetail }: DiscoveryScreenProps) {
+export function DiscoveryScreen({ userId, embedded = false, onBack, onViewDetail }: DiscoveryScreenProps) {
   const [sets, setSets] = useState<PublicFlashcardSet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -32,7 +35,11 @@ export function DiscoveryScreen({ onBack, onViewDetail }: DiscoveryScreenProps) 
 
     try {
       const data = await getPublicFlashcardSets(pageNum, 10, searchQuery);
-      setSets(pageNum === 1 ? data.sets : [...sets, ...data.sets]);
+      const filteredSets = data.sets
+        .filter((setItem) => setItem.authorId !== userId)
+        .sort((a, b) => b.savedCount - a.savedCount);
+
+      setSets((prev) => (pageNum === 1 ? filteredSets : [...prev, ...filteredSets]));
       setHasMore(data.pagination.hasMore);
       setMessage(null);
     } catch (error) {
@@ -43,20 +50,27 @@ export function DiscoveryScreen({ onBack, onViewDetail }: DiscoveryScreenProps) 
   };
 
   useEffect(() => {
-    loadSets(1, search);
+    loadSets(1, '');
   }, []);
 
-  const handleSearch = (text: string) => {
-    setSearch(text);
+  const handleApplySearch = () => {
+    setSearchQuery(searchInput.trim());
     setPage(1);
-    loadSets(1, text);
+    loadSets(1, searchInput.trim());
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setPage(1);
+    loadSets(1, '');
   };
 
   const handleLoadMore = () => {
     if (hasMore && !loading) {
       const nextPage = page + 1;
       setPage(nextPage);
-      loadSets(nextPage, search);
+      loadSets(nextPage, searchQuery);
     }
   };
 
@@ -70,20 +84,19 @@ export function DiscoveryScreen({ onBack, onViewDetail }: DiscoveryScreenProps) 
           {item.title}
         </Text>
         <Text style={styles.setMeta}>
-          👤 {item.authorName} • 📚 {item.cardCount} thẻ
+          Tác giả: {item.authorName} • {item.cardCount} thẻ
         </Text>
-        <Text style={styles.setMeta}>🔥 {item.savedCount} lần lưu</Text>
+        <Text style={styles.setMeta}>Lượt lưu: {item.savedCount}</Text>
         {item.description && (
           <Text style={styles.description} numberOfLines={2}>
             {item.description}
           </Text>
         )}
       </View>
-      <Ionicons name="chevron-forward" size={24} color={AUTH_ACTION_COLOR} />
     </Pressable>
   );
 
-  if (loading && page === 1) {
+  if (!embedded && loading && page === 1) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.topBar}>
@@ -101,6 +114,67 @@ export function DiscoveryScreen({ onBack, onViewDetail }: DiscoveryScreenProps) 
     );
   }
 
+  const content = (
+    <>
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Tìm bộ từ vựng..."
+          value={searchInput}
+          onChangeText={setSearchInput}
+          onSubmitEditing={handleApplySearch}
+          placeholderTextColor="#ccc"
+        />
+
+        <Pressable style={styles.searchBtn} onPress={handleApplySearch}>
+          <Ionicons name="search" size={16} color="#fff" />
+          <Text style={styles.searchBtnText}>Tìm</Text>
+        </Pressable>
+
+        {searchInput ? (
+          <Pressable style={styles.clearBtn} onPress={handleClearSearch}>
+            <Ionicons name="close" size={18} color="#999" />
+          </Pressable>
+        ) : null}
+      </View>
+
+      {message && <Text style={styles.errorText}>{message}</Text>}
+
+      {loading && page === 1 ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={AUTH_ACTION_COLOR} />
+        </View>
+      ) : (
+        <FlatList
+          data={sets}
+          keyExtractor={(item) => `${item.id}`}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          ListEmptyComponent={
+            !loading ? (
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyText}>Không tìm thấy bộ nào</Text>
+              </View>
+            ) : null
+          }
+          ListFooterComponent={
+            loading && page > 1 ? (
+              <View style={styles.loaderWrap}>
+                <ActivityIndicator size="small" color={AUTH_ACTION_COLOR} />
+              </View>
+            ) : null
+          }
+        />
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return <View style={styles.embeddedContainer}>{content}</View>;
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.topBar}>
@@ -110,53 +184,14 @@ export function DiscoveryScreen({ onBack, onViewDetail }: DiscoveryScreenProps) 
         <Text style={styles.topBarTitle}>Khám phá</Text>
         <View style={styles.iconButton} />
       </View>
-
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={18} color="#999" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Tìm bộ từ vựng..."
-          value={search}
-          onChangeText={handleSearch}
-          placeholderTextColor="#ccc"
-        />
-        {search ? (
-          <Pressable onPress={() => handleSearch('')}>
-            <Ionicons name="close" size={18} color="#999" />
-          </Pressable>
-        ) : null}
-      </View>
-
-      {message && <Text style={styles.errorText}>{message}</Text>}
-
-      <FlatList
-        data={sets}
-        keyExtractor={(item) => `${item.id}`}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.3}
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.emptyWrap}>
-              <Text style={styles.emptyText}>Không tìm thấy bộ nào</Text>
-            </View>
-          ) : null
-        }
-        ListFooterComponent={
-          loading && page > 1 ? (
-            <View style={styles.loaderWrap}>
-              <ActivityIndicator size="small" color={AUTH_ACTION_COLOR} />
-            </View>
-          ) : null
-        }
-      />
+      {content}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f5f7f7' },
+  embeddedContainer: { flex: 1, backgroundColor: '#f5f7f7' },
   topBar: {
     height: 56,
     backgroundColor: AUTH_ACTION_COLOR,
@@ -179,8 +214,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd'
   },
-  searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 14, color: '#111' },
+  searchBtn: {
+    marginLeft: 8,
+    height: 28,
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    backgroundColor: AUTH_ACTION_COLOR,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4
+  },
+  searchBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  clearBtn: { marginLeft: 8 },
   listContent: { paddingHorizontal: 12, paddingBottom: 16 },
   setCard: {
     flexDirection: 'row',
