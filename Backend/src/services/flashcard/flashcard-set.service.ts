@@ -4,7 +4,7 @@
  */
 
 import { prisma } from '../../lib/prisma.js';
-import { ensureOwnership, updateCardCount } from '../../utils/flashcard/index.js';
+import { ensureOwnership } from '../../utils/flashcard/index.js';
 
 export const getUserFlashcardSets = async (userId: number) => {
   return prisma.flashcard_sets.findMany({
@@ -57,19 +57,56 @@ export const updateFlashcardSet = async (
 };
 
 export const deleteFlashcardSet = async (setId: number, userId: number) => {
-  const { error } = await ensureOwnership(setId, userId);
+  const { set, error } = await ensureOwnership(setId, userId);
 
-  if (error) {
-    throw new Error(`${error.statusCode}: ${error.message}`);
+  if (error || !set) {
+    const statusCode = error?.statusCode ?? 404;
+    const message = error?.message ?? 'Set not found';
+    throw new Error(`${statusCode}: ${message}`);
   }
 
-  // Delete all cards in set
-  await prisma.flashcards.deleteMany({
-    where: { set_id: setId }
-  });
+  await prisma.$transaction(async (tx) => {
+    const cards = await tx.flashcards.findMany({
+      where: { set_id: setId },
+      select: { id: true }
+    });
 
-  // Delete the set
-  await prisma.flashcard_sets.delete({
-    where: { id: setId }
+    const cardIds = cards.map((card) => card.id);
+
+    if (cardIds.length > 0) {
+      await tx.spaced_repetition_cards.deleteMany({
+        where: {
+          flashcard_id: {
+            in: cardIds
+          }
+        }
+      });
+
+      await tx.flashcard_review_logs.deleteMany({
+        where: {
+          flashcard_id: {
+            in: cardIds
+          }
+        }
+      });
+    }
+
+    await tx.user_saved_sets.deleteMany({
+      where: { set_id: setId }
+    });
+
+    // Keep imported clones, but remove their link to the deleted source set.
+    await tx.flashcard_sets.updateMany({
+      where: { imported_from_set_id: setId },
+      data: { imported_from_set_id: null }
+    });
+
+    await tx.flashcards.deleteMany({
+      where: { set_id: setId }
+    });
+
+    await tx.flashcard_sets.delete({
+      where: { id: setId }
+    });
   });
 };

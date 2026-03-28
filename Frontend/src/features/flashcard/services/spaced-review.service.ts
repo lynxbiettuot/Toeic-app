@@ -19,6 +19,24 @@ export interface RateReviewCardResponse {
   dueCount: number;
 }
 
+const normalizeReviewCard = (card: any): ReviewFlashcard => ({
+  id: card.id,
+  setId: card.setId,
+  setTitle: card.setTitle,
+  word: card.word,
+  word_type: card.word_type ?? card.wordType ?? null,
+  pronunciation: card.pronunciation ?? null,
+  definition: card.definition,
+  example: card.example ?? null,
+  image_url: card.image_url ?? card.imageUrl ?? null,
+  reviewState: {
+    nextReviewAt: card.reviewState?.nextReviewAt ?? null,
+    intervalDays: card.reviewState?.intervalDays ?? 1,
+    easeFactor: card.reviewState?.easeFactor ?? 2.5,
+    repetitions: card.reviewState?.repetitions ?? 0
+  }
+});
+
 export const getDueReviewCards = async (userId: number): Promise<GetDueReviewCardsResponse> => {
   const response = await fetch(buildUrl(`/flashcards/review/due?userId=${userId}`));
   const json = (await response.json()) as { data?: GetDueReviewCardsResponse; message?: string };
@@ -31,7 +49,10 @@ export const getDueReviewCards = async (userId: number): Promise<GetDueReviewCar
     throw new Error('Invalid response payload');
   }
 
-  return json.data;
+  return {
+    ...json.data,
+    cards: json.data.cards.map((card) => normalizeReviewCard(card))
+  };
 };
 
 export const rateReviewCard = async (
@@ -78,9 +99,11 @@ export const getAllUserFlashcards = async (userId: number): Promise<ReviewFlashc
           ...cardJson.data.cards.map((card: any) => ({
             id: card.id,
             word: card.word,
+            word_type: card.word_type ?? null,
             definition: card.definition,
             pronunciation: card.pronunciation,
             example: card.example,
+            image_url: card.image_url,
             setId: set.id,
             setTitle: set.title,
             reviewState: {

@@ -12,9 +12,11 @@ export interface ReviewCard {
   setId: number;
   setTitle: string;
   word: string;
+  word_type: string | null;
   pronunciation: string | null;
   definition: string;
   example: string | null;
+  image_url: string | null;
   reviewState: {
     easeFactor: number;
     intervalDays: number;
@@ -73,9 +75,11 @@ export const getDueReviewCards = async (userId: number) => {
       setId: card.set_id,
       setTitle: card.set.title,
       word: card.word,
+      word_type: card.word_type,
       pronunciation: card.pronunciation,
       definition: card.definition,
       example: card.example,
+      image_url: card.image_url,
       reviewState: {
         easeFactor: state?.ease_factor ?? 2.5,
         intervalDays: state?.interval_days ?? 1,

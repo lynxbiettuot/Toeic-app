@@ -30,3 +30,17 @@ export const normalizePronunciation = (value: unknown): string | null => {
 export const normalizeExample = (value: unknown): string | null => {
   return typeof value === 'string' ? value.trim() || null : null;
 };
+
+export const normalizeImageUrl = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const url = value.trim();
+
+  if (!url) {
+    return null;
+  }
+
+  return /^https?:\/\//i.test(url) ? url : null;
+};

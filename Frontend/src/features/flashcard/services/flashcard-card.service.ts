@@ -38,6 +38,7 @@ export const createFlashcard = async (
     pronunciation: string;
     definition: string;
     example: string;
+    imageUrl: string;
   }
 ): Promise<Flashcard> => {
   const response = await fetch(buildUrl(`/flashcards/sets/${setId}/cards`), {
@@ -58,6 +59,7 @@ export const updateFlashcard = async (
     pronunciation: string;
     definition: string;
     example: string;
+    imageUrl: string;
   }
 ): Promise<Flashcard> => {
   const response = await fetch(buildUrl(`/flashcards/cards/${cardId}`), {

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -35,6 +36,7 @@ type FlashcardFormState = {
   pronunciation: string;
   definition: string;
   example: string;
+  imageUrl: string;
 };
 
 const EMPTY_FORM: FlashcardFormState = {
@@ -42,7 +44,8 @@ const EMPTY_FORM: FlashcardFormState = {
   wordType: '',
   pronunciation: '',
   definition: '',
-  example: ''
+  example: '',
+  imageUrl: ''
 };
 
 export function FlashcardSetDetailScreen({
@@ -59,8 +62,12 @@ export function FlashcardSetDetailScreen({
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
   const [formState, setFormState] = useState<FlashcardFormState>(EMPTY_FORM);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [imageLoadErrorIds, setImageLoadErrorIds] = useState<Record<number, boolean>>({});
+  const [modalImagePreviewError, setModalImagePreviewError] = useState(false);
 
   const modalTitle = useMemo(() => (editingCard ? 'Sửa flashcard' : 'Tạo flashcard'), [editingCard]);
+  const previewImageUrl = useMemo(() => formState.imageUrl.trim(), [formState.imageUrl]);
+  const hasPreviewImageUrl = /^https?:\/\//i.test(previewImageUrl);
 
   const loadCards = async () => {
     setLoading(true);
@@ -68,6 +75,7 @@ export function FlashcardSetDetailScreen({
     try {
       const data = await getFlashcardsBySet(flashcardSet.id, userId);
       setCards(data.cards);
+      setImageLoadErrorIds({});
       setMessage(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Không thể tải danh sách flashcard.');
@@ -83,6 +91,7 @@ export function FlashcardSetDetailScreen({
   const openCreateModal = () => {
     setEditingCard(null);
     setFormState(EMPTY_FORM);
+    setModalImagePreviewError(false);
     setModalError(null);
     setModalVisible(true);
   };
@@ -94,8 +103,10 @@ export function FlashcardSetDetailScreen({
       wordType: card.word_type ?? '',
       pronunciation: card.pronunciation ?? '',
       definition: card.definition,
-      example: card.example ?? ''
+      example: card.example ?? '',
+      imageUrl: card.image_url ?? ''
     });
+    setModalImagePreviewError(false);
     setModalError(null);
     setModalVisible(true);
   };
@@ -105,6 +116,7 @@ export function FlashcardSetDetailScreen({
       setModalVisible(false);
       setEditingCard(null);
       setFormState(EMPTY_FORM);
+      setModalImagePreviewError(false);
       setModalError(null);
     }
   };
@@ -124,7 +136,8 @@ export function FlashcardSetDetailScreen({
         wordType: formState.wordType.trim(),
         pronunciation: formState.pronunciation.trim(),
         definition: formState.definition.trim(),
-        example: formState.example.trim()
+        example: formState.example.trim(),
+        imageUrl: formState.imageUrl.trim()
       };
 
       if (editingCard) {
@@ -205,6 +218,21 @@ export function FlashcardSetDetailScreen({
                   <Text style={styles.cardLine}>Phiên âm: {card.pronunciation || '-'}</Text>
                   <Text style={styles.cardLine}>Định nghĩa: {card.definition}</Text>
                   <Text style={styles.cardLine}>Ví dụ: {card.example || '-'}</Text>
+                  {card.image_url && !imageLoadErrorIds[card.id] ? (
+                    <View style={styles.imageWrap}>
+                      <Text style={styles.cardLine}>Hình ảnh:</Text>
+                      <Image
+                        source={{ uri: card.image_url }}
+                        style={styles.cardImage}
+                        resizeMode="contain"
+                        onError={() => {
+                          setImageLoadErrorIds((prev) => ({ ...prev, [card.id]: true }));
+                        }}
+                      />
+                    </View>
+                  ) : (
+                    <Text style={styles.cardLine}>Hình ảnh: -</Text>
+                  )}
                 </View>
               ))}
 
@@ -269,6 +297,36 @@ export function FlashcardSetDetailScreen({
                 }}
                 placeholder="Nơi ở hoặc chỗ lưu trú"
               />
+
+              <Text style={styles.inputLabel}>Hình ảnh (URL)</Text>
+              <TextInput
+                value={formState.imageUrl}
+                style={styles.input}
+                onChangeText={(value) => {
+                  if (modalError) {
+                    setModalError(null);
+                  }
+                  if (modalImagePreviewError) {
+                    setModalImagePreviewError(false);
+                  }
+                  setFormState((prev) => ({ ...prev, imageUrl: value }));
+                }}
+                placeholder="https://example.com/image.jpg"
+                autoCapitalize="none"
+              />
+
+              {hasPreviewImageUrl ? (
+                !modalImagePreviewError ? (
+                  <Image
+                    source={{ uri: previewImageUrl }}
+                    style={styles.modalPreviewImage}
+                    resizeMode="contain"
+                    onError={() => setModalImagePreviewError(true)}
+                  />
+                ) : (
+                  <Text style={styles.previewErrorText}>Không tải được ảnh từ URL này.</Text>
+                )
+              ) : null}
 
               <Text style={styles.inputLabel}>Ví dụ</Text>
               <TextInput
@@ -367,6 +425,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   cardLine: { fontSize: 13, color: '#4f4f4f' },
+  imageWrap: { gap: 6 },
+  cardImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
+    backgroundColor: '#fff'
+  },
   emptyText: { textAlign: 'center', marginTop: 22, color: '#666' },
   modalBackdrop: {
     flex: 1,
@@ -396,6 +461,12 @@ const styles = StyleSheet.create({
     paddingTop: 10
   },
   modalErrorText: { color: '#b42318', marginBottom: 10, fontSize: 13 },
+  modalPreviewImage: {
+    width: '100%',
+    height: 90,
+    marginBottom: 10
+  },
+  previewErrorText: { fontSize: 12, color: '#b42318' },
   modalActionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelBtn: {
     height: 38,

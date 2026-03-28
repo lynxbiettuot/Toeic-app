@@ -9,9 +9,11 @@ export type ReviewFlashcard = {
   setId: number;
   setTitle: string;
   word: string;
+  word_type: string | null;
   pronunciation: string | null;
   definition: string;
   example: string | null;
+  image_url: string | null;
   reviewState: {
     easeFactor: number;
     intervalDays: number;
