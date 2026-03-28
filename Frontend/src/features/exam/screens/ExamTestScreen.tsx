@@ -17,7 +17,8 @@ import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
 
 export function ExamTestScreen({ navigation, route }: any) {
-  const { examId, sessionId, duration } = route.params;
+  const { examId, sessionId, duration, questionFilter } = route.params;
+  const isPracticeMode = !!(questionFilter && Array.isArray(questionFilter) && questionFilter.length > 0);
   const [questions, setQuestions] = useState<any[]>([]);
   const [pages, setPages] = useState<any[][]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,13 +57,19 @@ export function ExamTestScreen({ navigation, route }: any) {
       .then((res) => res.json())
       .then((data) => {
         if (data.statusCode === 200 && data.data?.questions) {
-          setQuestions(data.data.questions);
+          // Nếu có questionFilter, chỉ giữ lại các câu trong danh sách
+          const allQuestions: any[] = data.data.questions;
+          const filtered = questionFilter && Array.isArray(questionFilter)
+            ? allQuestions.filter((q: any) => (questionFilter as number[]).includes(q.id))
+            : allQuestions;
+
+          setQuestions(filtered);
 
           // Build pages correctly
           const groupedPages: any[][] = [];
           let currentGroup: any[] = [];
           
-          data.data.questions.forEach((q: any) => {
+          filtered.forEach((q: any) => {
             if (currentGroup.length === 0) {
               currentGroup.push(q);
             } else {
@@ -88,6 +95,9 @@ export function ExamTestScreen({ navigation, route }: any) {
   }, [examId]);
 
   useEffect(() => {
+    // Không chạy timer ở chế độ luyện tập câu sai
+    if (isPracticeMode) return;
+
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -102,7 +112,7 @@ export function ExamTestScreen({ navigation, route }: any) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [isPracticeMode]);
 
   const handleTimeUp = () => {
     Alert.alert("Hết giờ", "Thời gian làm bài đã kết thúc! Hệ thống sẽ nộp bài tự động.", [
@@ -213,16 +223,26 @@ export function ExamTestScreen({ navigation, route }: any) {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ answers: payload })
+        body: JSON.stringify({ answers: payload, isPractice: isPracticeMode })
       });
       const data = await res.json();
       
       if (data.statusCode === 200) {
-        navigation.replace('ExamResultScreen', {
-          result: data.data,
-          examId,
-          sessionId,
-        });
+        if (isPracticeMode) {
+          // Chế độ luyện tập → hiện kết quả để biết câu đúng/sai
+          navigation.replace('ExamResultScreen', {
+            result: data.data,
+            examId,
+            sessionId,
+            isPractice: true,
+          });
+        } else {
+          navigation.replace('ExamResultScreen', {
+            result: data.data,
+            examId,
+            sessionId,
+          });
+        }
       } else {
         Alert.alert("Lỗi", "Không thể nộp bài.");
         setSubmitting(false);
@@ -308,9 +328,27 @@ export function ExamTestScreen({ navigation, route }: any) {
         }}>
           <Ionicons name="close" size={28} color="#111" />
         </TouchableOpacity>
-        <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+        {isPracticeMode ? (
+          <View style={styles.practiceLabel}>
+            <Ionicons name="school-outline" size={16} color="#27ae60" />
+            <Text style={styles.practiceLabelText}>Luyện tập</Text>
+          </View>
+        ) : (
+          <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+        )}
         <TouchableOpacity onPress={() => setShowReview(true)}>
           <Ionicons name="grid-outline" size={24} color={AUTH_ACTION_COLOR} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleAttemptSubmit}
+          disabled={submitting}
+          style={styles.submitBtn}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.submitBtnText}>Nộp bài</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -622,5 +660,32 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center"
   },
-  submitButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" }
+  submitButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  practiceLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#eafaf1",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#27ae60",
+  },
+  practiceLabelText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#27ae60",
+  },
+  submitBtn: {
+    backgroundColor: AUTH_ACTION_COLOR,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  submitBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
 });

@@ -237,8 +237,10 @@ const loadSessionData = async (examId: number, sessionId: number) => {
   };
 };
 
-export const getPublicExams = async (_req: Request, res: Response) => {
+export const getPublicExams = async (req: Request, res: Response) => {
   try {
+    const userId = parseIntParam(req.query.userId);
+
     const exams = await prisma.exam_sets.findMany({
       where: {
         deleted_at: null,
@@ -255,6 +257,60 @@ export const getPublicExams = async (_req: Request, res: Response) => {
         total_questions: true,
       },
     });
+
+    // If userId provided, fetch best completed session per exam
+    if (userId !== null) {
+      const sessions = await prisma.test_sessions.findMany({
+        where: {
+          user_id: userId,
+          status: "COMPLETED",
+          exam_set_id: { in: exams.map((e) => e.id) },
+        },
+        select: {
+          id: true,
+          exam_set_id: true,
+          total_score: true,
+          listening_score: true,
+          reading_score: true,
+          submitted_at: true,
+        },
+        orderBy: { submitted_at: "desc" },
+      });
+
+      // Build a map: exam_set_id -> best session (highest score)
+      const bestSessionMap = new Map<number, typeof sessions[0]>();
+      for (const session of sessions) {
+        const existing = bestSessionMap.get(session.exam_set_id);
+        if (!existing || (session.total_score ?? 0) > (existing.total_score ?? 0)) {
+          bestSessionMap.set(session.exam_set_id, session);
+        }
+      }
+
+      // Latest completed session per exam (for navigation)
+      const latestSessionMap = new Map<number, typeof sessions[0]>();
+      for (const session of sessions) {
+        if (!latestSessionMap.has(session.exam_set_id)) {
+          latestSessionMap.set(session.exam_set_id, session);
+        }
+      }
+
+      const examsWithStatus = exams.map((exam) => {
+        const bestSession = bestSessionMap.get(exam.id);
+        const latestSession = latestSessionMap.get(exam.id);
+        return {
+          ...exam,
+          completed: !!bestSession,
+          best_score: bestSession?.total_score ?? null,
+          latest_session_id: latestSession?.id ?? null,
+        };
+      });
+
+      return res.status(200).json({
+        message: "Lấy danh sách đề thi thành công.",
+        statusCode: 200,
+        data: examsWithStatus,
+      });
+    }
 
     return res.status(200).json({
       message: "Lấy danh sách đề thi thành công.",
@@ -429,11 +485,12 @@ export const submitTestSession = async (req: Request, res: Response) => {
     }
 
     // Cập nhật Test Session
+    const finalStatus = req.body.isPractice ? "PRACTICE_COMPLETED" : "COMPLETED";
     const updatedSession = await prisma.test_sessions.update({
       where: { id: parseInt(String(sessionId), 10) },
       data: {
         submitted_at: new Date(),
-        status: "COMPLETED",
+        status: finalStatus,
         listening_score: listeningScore,
         reading_score: readingScore,
         total_score: totalScore,
@@ -757,6 +814,142 @@ export const getTestSessionQuestionDetail = async (req: Request, res: Response) 
     });
   } catch (error) {
     console.error("Lỗi lấy chi tiết câu hỏi:", error);
+    return res.status(500).json({
+      message: "Lỗi server.",
+      statusCode: 500,
+    });
+  }
+};
+
+export const getWrongAnswerHistory = async (req: Request, res: Response) => {
+  try {
+    const userId = parseIntParam(req.query.userId);
+
+    if (userId === null) {
+      return res.status(400).json({
+        message: "userId không hợp lệ.",
+        statusCode: 400,
+      });
+    }
+
+    // Lấy tất cả phiên thi COMPLETED của user, join exam info
+    const sessions = await prisma.test_sessions.findMany({
+      where: {
+        user_id: userId,
+        status: "COMPLETED",
+      },
+      select: {
+        id: true,
+        exam_set_id: true,
+        submitted_at: true,
+        total_score: true,
+        exam_set: {
+          select: {
+            id: true,
+            title: true,
+            year: true,
+          },
+        },
+      },
+      orderBy: { submitted_at: "desc" },
+    });
+
+    if (sessions.length === 0) {
+      return res.status(200).json({
+        message: "Không có lịch sử sai sót.",
+        statusCode: 200,
+        data: [],
+      });
+    }
+
+    const sessionIds = sessions.map((s) => s.id);
+
+    // Lấy tất cả câu trả lời sai từ các phiên thi này
+    const wrongAnswers = await prisma.user_answers.findMany({
+      where: {
+        session_id: { in: sessionIds },
+        is_correct: false,
+      },
+      select: {
+        session_id: true,
+        question_id: true,
+        selected_option: true,
+        question: {
+          select: {
+            id: true,
+            question_number: true,
+            part_number: true,
+            content: true,
+          },
+        },
+      },
+      orderBy: { question: { question_number: "asc" } },
+    });
+
+    // Nhóm câu sai theo session
+    const wrongBySession = new Map<number, typeof wrongAnswers>();
+    for (const wa of wrongAnswers) {
+      const existing = wrongBySession.get(wa.session_id) ?? [];
+      existing.push(wa);
+      wrongBySession.set(wa.session_id, existing);
+    }
+
+    // Nhóm sessions theo exam, lấy session gần nhất cho mỗi exam
+    const examMap = new Map<
+      number,
+      {
+        exam_id: number;
+        exam_title: string;
+        exam_year: number | null;
+        session_id: number;
+        submitted_at: Date | null;
+        total_score: number | null;
+        wrong_count: number;
+        wrong_questions: {
+          question_id: number;
+          question_number: number;
+          part_number: number;
+          content: string | null;
+          selected_option: string | null;
+        }[];
+      }
+    >();
+
+    for (const session of sessions) {
+      const examId = session.exam_set_id;
+      // Chỉ lấy lần làm gần nhất cho mỗi đề (sessions đã sort desc by submitted_at)
+      if (examMap.has(examId)) continue;
+
+      const wrongs = wrongBySession.get(session.id) ?? [];
+      if (wrongs.length === 0) continue; // Bỏ qua đề không có câu sai
+
+      examMap.set(examId, {
+        exam_id: examId,
+        exam_title: session.exam_set.title,
+        exam_year: session.exam_set.year,
+        session_id: session.id,
+        submitted_at: session.submitted_at,
+        total_score: session.total_score,
+        wrong_count: wrongs.length,
+        wrong_questions: wrongs.map((wa) => ({
+          question_id: wa.question_id,
+          question_number: wa.question.question_number,
+          part_number: wa.question.part_number,
+          content: wa.question.content,
+          selected_option: wa.selected_option,
+        })),
+      });
+    }
+
+    const result = Array.from(examMap.values());
+
+    return res.status(200).json({
+      message: "Lấy lịch sử sai sót thành công.",
+      statusCode: 200,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Lỗi lấy lịch sử sai sót:", error);
     return res.status(500).json({
       message: "Lỗi server.",
       statusCode: 500,

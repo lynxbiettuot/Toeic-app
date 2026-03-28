@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { AuthScreen } from '../features/auth/screens/AuthScreen';
 import { UserHomeScreen } from '../features/user/screens/UserHomeScreen';
 import { ExamListScreen } from '../features/exam/screens/ExamListScreen';
@@ -8,6 +8,8 @@ import { ExamResultScreen } from '../features/exam/screens/ExamResultScreen';
 import { ExamSessionPartsScreen } from '../features/exam/screens/ExamSessionPartsScreen';
 import { ExamSessionPartQuestionsScreen } from '../features/exam/screens/ExamSessionPartQuestionsScreen';
 import { ExamQuestionDetailScreen } from '../features/exam/screens/ExamQuestionDetailScreen';
+import { WrongAnswerHistoryScreen } from '../features/exam/screens/WrongAnswerHistoryScreen';
+import { WrongAnswerListScreen } from '../features/exam/screens/WrongAnswerListScreen';
 import { FlashcardLibraryScreen } from '../features/flashcard/screens/FlashcardLibraryScreen';
 import { FlashcardSetDetailScreen } from '../features/flashcard/screens/FlashcardSetDetailScreen';
 import { SpacedReviewScreen } from '../features/flashcard/screens/SpacedReviewScreen';
@@ -25,6 +27,8 @@ type ScreenState =
   | 'exam-session-parts'
   | 'exam-session-part-questions'
   | 'exam-question-detail'
+  | 'wrong-history'
+  | 'wrong-list'
   | 'flashcard-library'
   | 'flashcard-detail'
   | 'spaced-review'
@@ -39,6 +43,17 @@ export function AppEntry() {
   const [examParams, setExamParams] = useState<any>({});
   const [selectedSet, setSelectedSet] = useState<FlashcardSet | null>(null);
   const [selectedPublicSet, setSelectedPublicSet] = useState<PublicFlashcardSet | null>(null);
+  const [prevScreen, setPrevScreen] = useState<string>('');
+
+  // Ref luôn cập nhật để tránh stale closure trong navigationShim
+  const screenRef = React.useRef(screen);
+  const prevScreenRef = React.useRef(prevScreen);
+  React.useEffect(() => {
+    screenRef.current = screen;
+  }, [screen]);
+  React.useEffect(() => {
+    prevScreenRef.current = prevScreen;
+  }, [prevScreen]);
 
   const navigationShim = {
     navigate: (screenName: string, params?: any) => {
@@ -48,7 +63,12 @@ export function AppEntry() {
       if (screenName === 'ExamResultScreen') setScreen('exam-result');
       if (screenName === 'ExamSessionPartsScreen') setScreen('exam-session-parts');
       if (screenName === 'ExamSessionPartQuestionsScreen') setScreen('exam-session-part-questions');
-      if (screenName === 'ExamQuestionDetailScreen') setScreen('exam-question-detail');
+      if (screenName === 'ExamQuestionDetailScreen') {
+        setPrevScreen(screenRef.current); // Lưu màn hình trước khi vào chi tiết câu
+        setScreen('exam-question-detail');
+      }
+      if (screenName === 'WrongAnswerListScreen') setScreen('wrong-list');
+      if (screenName === 'ExamTestScreen') setScreen('exam-test');
     },
     replace: (screenName: string, params?: any) => {
       if (params) setExamParams((prev) => ({ ...prev, ...params }));
@@ -59,12 +79,19 @@ export function AppEntry() {
       if (screenName === 'ExamQuestionDetailScreen') setScreen('exam-question-detail');
     },
     goBack: () => {
-      if (screen === 'exam-intro') setScreen('exam-list');
-      if (screen === 'exam-test') setScreen('exam-list');
-      if (screen === 'exam-result') setScreen('exam-test');
-      if (screen === 'exam-session-parts') setScreen('exam-result');
-      if (screen === 'exam-session-part-questions') setScreen('exam-session-parts');
-      if (screen === 'exam-question-detail') setScreen('exam-session-part-questions');
+      const cur = screenRef.current;
+      const prev = prevScreenRef.current;
+      if (cur === 'exam-intro') setScreen('exam-list');
+      if (cur === 'exam-test') setScreen('exam-list');
+      if (cur === 'exam-result') setScreen('exam-test');
+      if (cur === 'exam-session-parts') setScreen('exam-result');
+      if (cur === 'exam-session-part-questions') setScreen('exam-session-parts');
+      // Khi xem chi tiết câu hỏi: quay về màn hình trước đó
+      if (cur === 'exam-question-detail') {
+        setScreen(prev === 'wrong-list' ? 'wrong-list' : 'exam-session-part-questions');
+      }
+      if (cur === 'wrong-list') setScreen('wrong-history');
+      if (cur === 'wrong-history') setScreen('home');
     }
   };
 
@@ -157,8 +184,26 @@ export function AppEntry() {
     return <ExamIntroScreen navigation={navigationShim} route={{ params: examParams }} />;
   }
 
+  if (screen === 'wrong-history') {
+    return (
+      <WrongAnswerHistoryScreen
+        navigation={navigationShim}
+        onBack={() => setScreen('home')}
+      />
+    );
+  }
+
+  if (screen === 'wrong-list') {
+    return <WrongAnswerListScreen navigation={navigationShim} route={{ params: examParams }} />;
+  }
+
   if (screen === 'exam-list') {
-    return <ExamListScreen navigation={navigationShim} onBack={() => setScreen('home')} />;
+    return (
+      <ExamListScreen
+        navigation={navigationShim}
+        onBack={() => setScreen('home')}
+      />
+    );
   }
 
   if (screen === 'home') {
@@ -171,6 +216,7 @@ export function AppEntry() {
           setScreen('flashcard-library');
         }}
         onOpenVocabularyReview={() => setScreen('spaced-review')}
+        onOpenWrongHistory={() => setScreen('wrong-history')}
       />
     );
   }
