@@ -11,28 +11,38 @@ import { Ionicons } from "@expo/vector-icons";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
 import { API_BASE_URL } from "../../../config/api";
 
+const MOCK_USER_ID = 1;
+
 type Exam = {
   id: number;
   title: string;
   total_questions: number;
   duration_minutes: number;
   year?: number;
+  completed?: boolean;
+  best_score?: number | null;
+  latest_session_id?: number | null;
 };
 
-export function ExamListScreen({ navigation, onBack }: { navigation?: any, onBack: () => void }) {
+export function ExamListScreen({
+  navigation,
+  onBack,
+}: {
+  navigation?: any;
+  onBack: () => void;
+}) {
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
-  useEffect(() => {
-    // Lưu ý: đổi đường dẫn này thành đường dẫn bạn đang dùng, ví dụ: `/admin/exams` hoặc `/user/exams`
-    fetch(`${API_BASE_URL}/admin/exams`)
+  const fetchExams = () => {
+    setLoading(true);
+    fetch(`${API_BASE_URL}/exams?userId=${MOCK_USER_ID}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.data && Array.isArray(data.data)) {
           setExams(data.data);
 
-          // Trích xuất các năm hợp lệ (kiểu number) và loại bỏ trùng lặp
           const validYears: number[] = data.data
             .map((e: Exam) => e.year)
             .filter((y): y is number => typeof y === "number");
@@ -46,9 +56,19 @@ export function ExamListScreen({ navigation, onBack }: { navigation?: any, onBac
       })
       .catch((err) => console.error("Lỗi tải đề thi:", err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchExams();
   }, []);
 
-  // Lấy danh sách các năm để hiển thị trên thanh chọn (Sắp xếp giảm dần)
+  // Reload khi màn hình được focus trở lại (sau khi làm bài xong)
+  useEffect(() => {
+    if (!navigation || typeof navigation.addListener !== "function") return;
+    const unsubscribe = navigation.addListener("focus", fetchExams);
+    return unsubscribe;
+  }, [navigation]);
+
   const availableYears = Array.from(
     new Set(
       exams
@@ -57,10 +77,26 @@ export function ExamListScreen({ navigation, onBack }: { navigation?: any, onBac
     ),
   ).sort((a, b) => b - a);
 
-  // Lọc đề thi theo năm đã chọn
   const filteredExams = selectedYear
     ? exams.filter((e) => e.year === selectedYear)
     : exams;
+
+  const handleExamPress = (item: Exam) => {
+    if (!navigation) return;
+    if (item.completed && item.latest_session_id) {
+      navigation.navigate("ExamIntroScreen", {
+        examId: item.id,
+        completed: true,
+        sessionId: item.latest_session_id,
+      });
+    } else {
+      navigation.navigate("ExamIntroScreen", {
+        examId: item.id,
+        completed: false,
+        sessionId: null,
+      });
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -109,18 +145,37 @@ export function ExamListScreen({ navigation, onBack }: { navigation?: any, onBac
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.examCard}
-              onPress={() => {
-                if (navigation) {
-                  navigation.navigate('ExamIntroScreen', { examId: item.id });
-                }
-              }}
+            <TouchableOpacity
+              style={[styles.examCard, item.completed && styles.examCardDone]}
+              onPress={() => handleExamPress(item)}
             >
-              <Text style={styles.examTitle}>{item.title}</Text>
+              <View style={styles.examCardTop}>
+                <Text style={styles.examTitle}>{item.title}</Text>
+                {item.completed && (
+                  <View style={styles.doneBadge}>
+                    <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                    <Text style={styles.doneBadgeText}>Đã làm</Text>
+                  </View>
+                )}
+              </View>
+
               <Text style={styles.examInfo}>
                 {item.total_questions} câu • {item.duration_minutes || 120} phút
               </Text>
+
+              {item.completed && item.best_score !== null && item.best_score !== undefined && (
+                <View style={styles.scoreRow}>
+                  <Ionicons name="trophy-outline" size={14} color={AUTH_ACTION_COLOR} />
+                  <Text style={styles.scoreText}>Điểm cao nhất: {item.best_score}</Text>
+                </View>
+              )}
+
+              {item.completed && (
+                <View style={styles.actionHint}>
+                  <Ionicons name="eye-outline" size={13} color="#888" />
+                  <Text style={styles.actionHintText}>Nhấn để xem kết quả hoặc làm lại</Text>
+                </View>
+              )}
             </TouchableOpacity>
           )}
         />
@@ -160,7 +215,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
   },
   yearButtonActive: {
-    backgroundColor: AUTH_ACTION_COLOR, // Đổi màu active thành màu chuẩn của app
+    backgroundColor: AUTH_ACTION_COLOR,
   },
   yearText: {
     fontSize: 15,
@@ -180,11 +235,78 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e1e1e1",
   },
+  examCardDone: {
+    borderColor: AUTH_ACTION_COLOR,
+    borderWidth: 1.5,
+    backgroundColor: "#f0f8ff",
+  },
+  examCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
   examTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#111",
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 8,
   },
-  examInfo: { fontSize: 13, color: "#666" },
+  doneBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#27ae60",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  doneBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  examInfo: { fontSize: 13, color: "#666", marginBottom: 6 },
+  scoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 4,
+  },
+  scoreText: {
+    fontSize: 13,
+    color: AUTH_ACTION_COLOR,
+    fontWeight: "600",
+  },
+  actionHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+  },
+  actionHintText: {
+    fontSize: 11,
+    color: "#888",
+    fontStyle: "italic",
+  },
+  wrongHistoryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#fff5f5",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#f5c6cb",
+  },
+  wrongHistoryBtnText: {
+    flex: 1,
+    fontSize: 15,
+    color: "#e74c3c",
+    fontWeight: "700",
+  },
 });

@@ -8,12 +8,14 @@ import {
   getTestSessionSummary,
   getTestSessionParts,
   getTestSessionPartQuestions,
-  getTestSessionQuestionDetail
+  getTestSessionQuestionDetail,
+  getWrongAnswerHistory
 } from "../../controllers/user/exam.js";
 
 const router = express.Router();
 
 router.get("/", getPublicExams);
+router.get("/wrong-answers", getWrongAnswerHistory);
 router.get("/:id", getExamDetails);
 router.get("/:id/questions", getExamQuestions);
 router.post("/:id/sessions", startTestSession);
