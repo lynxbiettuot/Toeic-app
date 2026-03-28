@@ -12,7 +12,8 @@ import {
   validateDefinition,
   normalizeWordType,
   normalizePronunciation,
-  normalizeExample
+  normalizeExample,
+  normalizeImageUrl
 } from '../../utils/flashcard/index.js';
 import * as FlashcardCardService from '../../services/flashcard/flashcard-card.service.js';
 
@@ -52,6 +53,7 @@ export const createFlashcard = async (req: Request, res: Response) => {
     const wordType = normalizeWordType(req.body.wordType);
     const pronunciation = normalizePronunciation(req.body.pronunciation);
     const example = normalizeExample(req.body.example);
+    const imageUrl = normalizeImageUrl(req.body.imageUrl);
 
     if (!userId || !setId || !word || !definition) {
       return res.status(400).json({ message: 'Missing required fields', statusCode: 400 });
@@ -64,7 +66,8 @@ export const createFlashcard = async (req: Request, res: Response) => {
       definition,
       wordType,
       pronunciation,
-      example
+      example,
+      imageUrl
     );
 
     return res.status(201).json({
@@ -92,6 +95,7 @@ export const updateFlashcard = async (req: Request, res: Response) => {
     const wordType = normalizeWordType(req.body.wordType);
     const pronunciation = normalizePronunciation(req.body.pronunciation);
     const example = normalizeExample(req.body.example);
+    const imageUrl = normalizeImageUrl(req.body.imageUrl);
 
     if (!userId || !cardId || !word || !definition) {
       return res.status(400).json({ message: 'Missing required fields', statusCode: 400 });
@@ -104,7 +108,8 @@ export const updateFlashcard = async (req: Request, res: Response) => {
       definition,
       wordType,
       pronunciation,
-      example
+      example,
+      imageUrl
     );
 
     return res.json({

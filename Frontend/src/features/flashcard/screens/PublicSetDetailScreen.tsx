@@ -112,9 +112,9 @@ export function PublicSetDetailScreen({
       <View style={styles.content}>
         <View style={styles.headerBox}>
           <Text style={styles.title}>{set.title}</Text>
-          <Text style={styles.author}>👤 {set.authorName}</Text>
+          <Text style={styles.author}>{set.authorName}</Text>
           <Text style={styles.meta}>
-            📚 {set.cardCount} thẻ • 🔥 {set.savedCount} lần lưu
+            {set.cardCount} thẻ • {set.savedCount} lần lưu
           </Text>
           {set.description ? <Text style={styles.description}>{set.description}</Text> : null}
         </View>
@@ -155,10 +155,7 @@ export function PublicSetDetailScreen({
           {importing ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <>
-              <Ionicons name="download" size={18} color="#fff" />
-              <Text style={styles.importBtnText}>💾 Lưu vào thư viện</Text>
-            </>
+            <Text style={styles.importBtnText}>Lưu vào thư viện</Text>
           )}
         </Pressable>
       </View>

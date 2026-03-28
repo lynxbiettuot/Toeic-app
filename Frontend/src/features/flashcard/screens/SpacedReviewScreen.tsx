@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -37,8 +38,13 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
   const [message, setMessage] = useState<string | null>(null);
   const [reviewedToday, setReviewedToday] = useState(0);
   const [dueCount, setDueCount] = useState(0);
+  const [frontImageError, setFrontImageError] = useState(false);
 
   const activeCard = useMemo(() => cards[0] ?? null, [cards]);
+
+  useEffect(() => {
+    setFrontImageError(false);
+  }, [activeCard?.id]);
 
   const shuffleCards = (input: ReviewFlashcard[]) => {
     const cloned = [...input];
@@ -53,6 +59,21 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
     return cloned;
   };
 
+  const orderReviewByDuePriority = (input: ReviewFlashcard[]) => {
+    const cloned = [...input];
+
+    return cloned.sort((a, b) => {
+      const aTime = a.reviewState.nextReviewAt ? new Date(a.reviewState.nextReviewAt).getTime() : Number.POSITIVE_INFINITY;
+      const bTime = b.reviewState.nextReviewAt ? new Date(b.reviewState.nextReviewAt).getTime() : Number.POSITIVE_INFINITY;
+
+      if (aTime !== bTime) {
+        return aTime - bTime;
+      }
+
+      return a.id - b.id;
+    });
+  };
+
   const loadDueCards = async () => {
     setLoading(true);
 
@@ -61,8 +82,9 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
         getDueReviewCards(userId),
         getTodayReviewStats(userId)
       ]);
-      setAllCards(dueData.cards);
-      setCards(shuffleCards(dueData.cards));
+      const orderedCards = orderReviewByDuePriority(dueData.cards);
+      setAllCards(orderedCards);
+      setCards(orderedCards);
       setMode('review');
       setReviewedToday(statsData.reviewedCount);
       setDueCount(dueData.dueCount);
@@ -189,7 +211,17 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
         <View style={styles.cardBox}>
           <Text style={styles.setTitle}>{activeCard.setTitle}</Text>
           <Text style={styles.wordText}>{activeCard.word}</Text>
+          <Text style={styles.wordType}>Từ loại: {activeCard.word_type || '-'}</Text>
           <Text style={styles.pronunciation}>{activeCard.pronunciation || '-'}</Text>
+
+          {!frontImageError && activeCard.image_url ? (
+            <Image
+              source={{ uri: activeCard.image_url }}
+              style={styles.frontImage}
+              resizeMode="contain"
+              onError={() => setFrontImageError(true)}
+            />
+          ) : null}
 
           {showBack && (
             <View style={styles.answerWrap}>
@@ -256,7 +288,14 @@ const styles = StyleSheet.create({
   },
   setTitle: { fontSize: 12, color: '#6b6b6b', marginBottom: 10 },
   wordText: { fontSize: 28, fontWeight: '700', color: '#111', marginBottom: 8 },
+  wordType: { fontSize: 14, color: '#4a4a4a', marginBottom: 6 },
   pronunciation: { fontSize: 16, color: '#3f3f3f' },
+  frontImage: {
+    width: '100%',
+    height: 130,
+    marginTop: 12,
+    backgroundColor: '#fff'
+  },
   answerWrap: {
     marginTop: 20,
     borderTopWidth: 1,

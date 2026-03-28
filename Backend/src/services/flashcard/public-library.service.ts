@@ -176,6 +176,6 @@ export const importFlashcardSet = async (sourceSetId: number, userId: number) =>
 
   return {
     setId: newSet.id,
-    message: `Imported "${sourceSet.title}" to your library`
+    message: `Đã thêm Bộ từ vựng "${sourceSet.title}" vào kho từ vựng của bạn!`
   };
 };

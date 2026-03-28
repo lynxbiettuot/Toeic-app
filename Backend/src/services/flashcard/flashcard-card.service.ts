@@ -28,7 +28,8 @@ export const createFlashcard = async (
   definition: string,
   wordType: string | null,
   pronunciation: string | null,
-  example: string | null
+  example: string | null,
+  imageUrl: string | null
 ) => {
   const { error } = await ensureOwnership(setId, userId);
 
@@ -43,7 +44,8 @@ export const createFlashcard = async (
       definition,
       word_type: wordType,
       pronunciation,
-      example
+      example,
+      image_url: imageUrl
     }
   });
 
@@ -59,7 +61,8 @@ export const updateFlashcard = async (
   definition: string,
   wordType: string | null,
   pronunciation: string | null,
-  example: string | null
+  example: string | null,
+  imageUrl: string | null
 ) => {
   const currentCard = await prisma.flashcards.findUnique({
     where: { id: cardId }
@@ -83,6 +86,7 @@ export const updateFlashcard = async (
       word_type: wordType,
       pronunciation,
       example,
+      image_url: imageUrl,
       updated_at: new Date()
     }
   });
