@@ -21,6 +21,7 @@ type UserHomeScreenProps = {
   onOpenFlashcard?: () => void;
   onOpenVocabularyReview?: () => void;
   onNavigateToExam?: () => void;
+  onOpenWrongHistory?: () => void;
 };
 
 type QuickAction = {
@@ -76,7 +77,8 @@ export function UserHomeScreen({
   displayName = 'Linh',
   onOpenFlashcard,
   onOpenVocabularyReview,
-  onNavigateToExam
+  onNavigateToExam,
+  onOpenWrongHistory,
 }: UserHomeScreenProps) {
   const actions = topActions.map((action) =>
     action.label === 'Flashcard'
@@ -118,6 +120,8 @@ export function UserHomeScreen({
                     action.onPress();
                   } else if (action.label === "Thi thử") {
                     onNavigateToExam?.();
+                  } else if (action.label === "Lịch sử & Sai sót") {
+                    onOpenWrongHistory?.();
                   }
                 }}
               >

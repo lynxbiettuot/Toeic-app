@@ -4,7 +4,7 @@ import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
 
 export function ExamResultScreen({ navigation, route }: any) {
-  const { result, examId, sessionId } = route.params;
+  const { result: initResult, examId, sessionId, fromHistory, isPractice } = route.params;
   const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,6 +25,13 @@ export function ExamResultScreen({ navigation, route }: any) {
       .finally(() => setLoading(false));
   }, [examId, sessionId]);
 
+  // Khi xem từ lịch sử, dùng dữ liệu session trong summary
+  const result = initResult ?? {
+    listening_score: summary?.session?.listening_score ?? 0,
+    reading_score: summary?.session?.reading_score ?? 0,
+    total_score: summary?.session?.total_score ?? 0,
+  };
+
   const totalQuestions = summary?.total_questions ?? 0;
   const correctCount = summary?.correct_count ?? 0;
   const wrongCount = summary?.wrong_count ?? Math.max(totalQuestions - correctCount, 0);
@@ -33,28 +40,33 @@ export function ExamResultScreen({ navigation, route }: any) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Kết quả bài thi</Text>
+      <Text style={styles.title}>
+        {isPractice ? "Kết quả luyện tập 🎉" : "Kết quả bài thi"}
+      </Text>
 
-      <View style={styles.scoreBoard}>
-        <View style={styles.scoreRow}>
-          <Text style={styles.label}>Điểm Nghe (Listening):</Text>
-          <Text style={styles.score}>{result.listening_score}</Text>
-        </View>
-        <View style={styles.scoreRow}>
-          <Text style={styles.label}>Điểm Đọc (Reading):</Text>
-          <Text style={styles.score}>{result.reading_score}</Text>
-        </View>
-        <View style={[styles.scoreRow, styles.totalRow]}>
-          <Text style={styles.labelTotal}>Tổng điểm:</Text>
-          <Text style={styles.scoreTotal}>{result.total_score}</Text>
-        </View>
-      </View>
+      {loading ? (
+        <ActivityIndicator size="large" color={AUTH_ACTION_COLOR} style={{ marginVertical: 40 }} />
+      ) : (
+        <>
+          {/* Chỉ hiện điểm khi không phải chế độ luyện tập */}
+          {!isPractice && (
+            <View style={styles.scoreBoard}>
+              <View style={styles.scoreRow}>
+                <Text style={styles.label}>Điểm Nghe (Listening):</Text>
+                <Text style={styles.score}>{result.listening_score}</Text>
+              </View>
+              <View style={styles.scoreRow}>
+                <Text style={styles.label}>Điểm Đọc (Reading):</Text>
+                <Text style={styles.score}>{result.reading_score}</Text>
+              </View>
+              <View style={[styles.scoreRow, styles.totalRow]}>
+                <Text style={styles.labelTotal}>Tổng điểm:</Text>
+                <Text style={styles.scoreTotal}>{result.total_score}</Text>
+              </View>
+            </View>
+          )}
 
-      <View style={styles.statBoard}>
-        {loading ? (
-          <ActivityIndicator size="small" color={AUTH_ACTION_COLOR} />
-        ) : (
-          <>
+          <View style={styles.statBoard}>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Số câu đúng</Text>
               <Text style={styles.statValue}>{correctCount}</Text>
@@ -69,9 +81,9 @@ export function ExamResultScreen({ navigation, route }: any) {
                 {answeredCount} / {totalQuestions}
               </Text>
             </View>
-          </>
-        )}
-      </View>
+          </View>
+        </>
+      )}
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -84,14 +96,20 @@ export function ExamResultScreen({ navigation, route }: any) {
             })
           }
         >
-          <Text style={styles.secondaryButtonText}>Chi tiết</Text>
+          <Text style={styles.secondaryButtonText}>Chi tiết từng câu</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("ExamListScreen")}
+          onPress={() =>
+            isPractice
+              ? navigation.navigate("WrongAnswerListScreen")
+              : navigation.navigate("ExamListScreen")
+          }
         >
-          <Text style={styles.buttonText}>Về danh sách đề thi</Text>
+          <Text style={styles.buttonText}>
+            {isPractice ? "Về danh sách câu sai" : "Về danh sách đề thi"}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -5,14 +5,17 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert
+  Alert,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
 
+const MOCK_USER_ID = 1;
+
 export function ExamIntroScreen({ navigation, route }: any) {
-  const { examId } = route.params;
+  const { examId, completed: initCompleted, sessionId: initSessionId } = route.params;
   const [exam, setExam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -33,19 +36,17 @@ export function ExamIntroScreen({ navigation, route }: any) {
     setStarting(true);
     try {
       const res = await fetch(`${API_BASE_URL}/exams/${examId}/sessions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ userId: 1 }) // Mock user id
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: MOCK_USER_ID }),
       });
       const data = await res.json();
-      
+
       if (data.statusCode === 201) {
-        navigation.replace('ExamTestScreen', {
+        navigation.replace("ExamTestScreen", {
           examId,
           sessionId: data.data.sessionId,
-          duration: exam.duration_minutes
+          duration: exam.duration_minutes,
         });
       } else {
         Alert.alert("Lỗi", "Không thể bắt đầu phiên thi.");
@@ -56,6 +57,26 @@ export function ExamIntroScreen({ navigation, route }: any) {
     } finally {
       setStarting(false);
     }
+  };
+
+  const handleRetakeExam = () => {
+    Alert.alert(
+      "Làm lại",
+      "Bạn muốn làm lại đề này? Một phiên thi mới sẽ được tạo.",
+      [
+        { text: "Hủy", style: "cancel" },
+        { text: "Làm lại", onPress: handleStartExam },
+      ]
+    );
+  };
+
+  const handleViewResult = () => {
+    if (!initSessionId) return;
+    navigation.navigate("ExamResultScreen", {
+      examId,
+      sessionId: initSessionId,
+      fromHistory: true,
+    });
   };
 
   if (loading) {
@@ -74,8 +95,11 @@ export function ExamIntroScreen({ navigation, route }: any) {
     );
   }
 
+  const isCompleted = !!initCompleted && !!initSessionId;
+
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#111" />
@@ -84,9 +108,18 @@ export function ExamIntroScreen({ navigation, route }: any) {
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Completed badge */}
+        {isCompleted && (
+          <View style={styles.completedBanner}>
+            <Ionicons name="checkmark-circle" size={20} color="#27ae60" />
+            <Text style={styles.completedBannerText}>Bạn đã hoàn thành đề thi này</Text>
+          </View>
+        )}
+
         <Text style={styles.title}>{exam.title}</Text>
-        
+
+        {/* Info box */}
         <View style={styles.infoBox}>
           <View style={styles.infoRow}>
             <Ionicons name="help-circle-outline" size={20} color="#666" />
@@ -101,29 +134,52 @@ export function ExamIntroScreen({ navigation, route }: any) {
             <Text style={styles.infoText}>Năm xuất bản: {exam.year || "-"}</Text>
           </View>
         </View>
-        
+
         <View style={styles.spacer} />
 
-        <TouchableOpacity 
-          style={[styles.button, styles.downloadBtn]}
-          onPress={() => Alert.alert("Tải tài nguyên", "Tính năng tải file audio chuẩn bị... (Sẽ làm thật ở version sau)")}
-        >
-          <Ionicons name="cloud-download-outline" size={20} color="#333" />
-          <Text style={styles.downloadText}>Tải tài nguyên (Audio)</Text>
-        </TouchableOpacity>
+        {/* Action buttons */}
+        {isCompleted ? (
+          <>
+            {/* View result */}
+            <TouchableOpacity
+              style={[styles.button, styles.resultBtn]}
+              onPress={handleViewResult}
+            >
+              <Ionicons name="bar-chart-outline" size={20} color={AUTH_ACTION_COLOR} />
+              <Text style={styles.resultBtnText}>Xem chi tiết kết quả</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.button}
-          onPress={handleStartExam}
-          disabled={starting}
-        >
-          {starting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Bắt đầu làm bài</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+            {/* Retake */}
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleRetakeExam}
+              disabled={starting}
+            >
+              {starting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="refresh-outline" size={20} color="#fff" />
+                  <Text style={styles.buttonText}>Làm lại</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </>
+        ) : (
+          /* Start exam (first time) */
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleStartExam}
+            disabled={starting}
+          >
+            {starting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Bắt đầu làm bài</Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -145,14 +201,31 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "700" },
   content: {
     padding: 24,
-    flex: 1,
+    flexGrow: 1,
+  },
+  completedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#eafaf1",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#a9dfbf",
+  },
+  completedBannerText: {
+    color: "#27ae60",
+    fontWeight: "600",
+    fontSize: 14,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 24,
-    color: "#111"
+    color: "#111",
   },
   infoBox: {
     backgroundColor: "#fff",
@@ -160,41 +233,43 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: "#e1e1e1",
-    gap: 16
+    gap: 16,
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12
+    gap: 12,
   },
   infoText: {
     fontSize: 16,
-    color: "#333"
+    color: "#333",
   },
   spacer: {
-    flex: 1,
+    height: 32,
   },
   button: {
     backgroundColor: AUTH_ACTION_COLOR,
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
     flexDirection: "row",
     justifyContent: "center",
-    gap: 8
+    gap: 8,
   },
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "700"
+    fontWeight: "700",
   },
-  downloadBtn: {
-    backgroundColor: "#e0e4e7"
+  resultBtn: {
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: AUTH_ACTION_COLOR,
   },
-  downloadText: {
-    color: "#333",
+  resultBtnText: {
+    color: AUTH_ACTION_COLOR,
     fontSize: 16,
-    fontWeight: "600"
-  }
+    fontWeight: "700",
+  },
 });
