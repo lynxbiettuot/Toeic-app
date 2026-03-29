@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable,
+import { Image, Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,10 +19,12 @@ import { BottomNavbar, NavScreen } from "../../../shared/components/BottomNavbar
 
 type UserHomeScreenProps = {
   displayName?: string;
+  avatarUrl?: string | null;
   onOpenFlashcard?: () => void;
   onOpenVocabularyReview?: () => void;
   onNavigateToExam?: () => void;
   onOpenWrongHistory?: () => void;
+  onOpenProfile?: () => void;
   onLogout?: () => void;
   onNavigate?: (screen: NavScreen) => void;
 };
@@ -78,13 +80,17 @@ const topActions: QuickAction[] = [
 
 export function UserHomeScreen({
   displayName = '',
+  avatarUrl = null,
   onOpenFlashcard,
   onOpenVocabularyReview,
   onNavigateToExam,
   onOpenWrongHistory,
+  onOpenProfile,
   onLogout,
   onNavigate,
 }: UserHomeScreenProps) {
+  const DEFAULT_AVATAR = "https://w7.pngwing.com/pngs/774/118/png-transparent-green-frog-character-illustration-pepe-the-frog-sweden-4chan-pol-internet-meme-frog-animals-hand-vertebrate.png";
+
   const actions = topActions.map((action) =>
     action.label === 'Flashcard'
       ? {
@@ -104,7 +110,12 @@ export function UserHomeScreen({
       <View style={styles.container}>
         <View style={styles.topBar}>
           <Ionicons name="menu" size={28} color="#111111" />
-          <View style={styles.avatar} />
+          <TouchableOpacity onPress={onOpenProfile}>
+            <Image 
+              source={{ uri: avatarUrl || DEFAULT_AVATAR }} 
+              style={styles.avatar} 
+            />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.headerLine} />

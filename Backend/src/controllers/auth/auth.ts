@@ -330,11 +330,12 @@ export const loginAdmin = async (req: Request, res: Response) => {
 // ==========================================
 export const getAccessToken = async (req: Request, res: Response) => {
   try {
-    const currentRefreshToken = req.cookies?.jwt;
+    // Ưu tiên lấy từ Body (cho Mobile) hoặc Cookie (cho Web)
+    const currentRefreshToken = req.body?.refreshToken || req.cookies?.jwt;
 
     if (!currentRefreshToken) {
       return res.status(401).json({
-        message: "Unauthorized: No cookie",
+        message: "Unauthorized: No token provided",
         statusCode: 401,
       });
     }

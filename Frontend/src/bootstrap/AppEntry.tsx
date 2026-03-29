@@ -17,11 +17,16 @@ import { FlashcardSetDetailScreen } from '../features/flashcard/screens/Flashcar
 import { SpacedReviewScreen } from '../features/flashcard/screens/SpacedReviewScreen';
 import { DiscoveryScreen } from '../features/flashcard/screens/DiscoveryScreen';
 import { PublicSetDetailScreen } from '../features/flashcard/screens/PublicSetDetailScreen';
+import { ProfileScreen } from '../features/user/screens/ProfileScreen';
+import { EditProfileScreen } from '../features/user/screens/EditProfileScreen';
 import type { FlashcardSet, PublicFlashcardSet } from '../features/flashcard/types';
 import {
   getAccessToken,
   getSavedUserId,
   getSavedDisplayName,
+  getSavedAvatarUrl,
+  saveDisplayName,
+  saveAvatarUrl,
   clearAuthData,
 } from '../shared/storage/tokenStorage';
 
@@ -42,11 +47,14 @@ type ScreenState =
   | 'flashcard-detail'
   | 'spaced-review'
   | 'discovery'
-  | 'public-detail';
+  | 'public-detail'
+  | 'profile'
+  | 'edit-profile';
 
 export function AppEntry() {
   const [screen, setScreen] = useState<ScreenState>('loading');
   const [displayName, setDisplayName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
   const [flashcardTab, setFlashcardTab] = useState<'my' | 'discover'>('my');
   const [examParams, setExamParams] = useState<any>({});
@@ -58,15 +66,17 @@ export function AppEntry() {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const [token, savedUserId, savedName] = await Promise.all([
+        const [token, savedUserId, savedName, savedAvatar] = await Promise.all([
           getAccessToken(),
           getSavedUserId(),
           getSavedDisplayName(),
+          getSavedAvatarUrl(),
         ]);
 
         if (token && savedUserId) {
           setUserId(savedUserId);
           setDisplayName(savedName ?? '');
+          setAvatarUrl(savedAvatar);
           setScreen('home');
         } else {
           setScreen('auth');
@@ -83,6 +93,7 @@ export function AppEntry() {
     await clearAuthData();
     setUserId(null);
     setDisplayName('');
+    setAvatarUrl(null);
     setScreen('auth');
   };
 
@@ -124,6 +135,11 @@ export function AppEntry() {
       }
       if (screenName === 'WrongAnswerListScreen') setScreen('wrong-list');
       if (screenName === 'ExamTestScreen') setScreen('exam-test');
+      if (screenName === 'Profile') setScreen('profile');
+      if (screenName === 'EditProfile') {
+        setExamParams(params); 
+        setScreen('edit-profile');
+      }
     },
     replace: (screenName: string, params?: any) => {
       // Always include userId in examParams for consistency across all exam screens
@@ -150,6 +166,8 @@ export function AppEntry() {
       }
       if (cur === 'wrong-list') setScreen('wrong-history');
       if (cur === 'wrong-history') setScreen('home');
+      if (cur === 'profile') setScreen('home');
+      if (cur === 'edit-profile') setScreen('profile');
     }
   };
 
@@ -268,6 +286,7 @@ export function AppEntry() {
     content = (
       <UserHomeScreen
         displayName={displayName}
+        avatarUrl={avatarUrl}
         onNavigateToExam={() => setScreen('exam-list')}
         onOpenFlashcard={() => {
           setFlashcardTab('my');
@@ -275,20 +294,50 @@ export function AppEntry() {
         }}
         onOpenVocabularyReview={() => setScreen('spaced-review')}
         onOpenWrongHistory={() => setScreen('wrong-history')}
+        onOpenProfile={() => setScreen('profile')}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
+      />
+    );
+  } else if (screen === 'profile') {
+    content = (
+      <ProfileScreen 
+        navigation={navigationShim} 
+        onUpdateUser={async (name: string, avatar: string) => {
+          setDisplayName(name);
+          setAvatarUrl(avatar);
+          await saveDisplayName(name);
+          await saveAvatarUrl(avatar);
+        }}
+      />
+    );
+  } else if (screen === 'edit-profile') {
+    content = (
+      <EditProfileScreen 
+        navigation={navigationShim} 
+        route={{ params: examParams }} 
+        onUpdateUser={async (name: string, avatar: string) => {
+          setDisplayName(name);
+          setAvatarUrl(avatar);
+          await saveDisplayName(name);
+          await saveAvatarUrl(avatar);
+        }}
       />
     );
   } else {
     content = (
       <AuthScreen
-        onLoginSuccess={(payload) => {
+        onLoginSuccess={(payload: any) => {
           if (payload?.displayName) {
             setDisplayName(payload.displayName);
           }
 
           if (payload?.userId) {
             setUserId(payload.userId);
+          }
+
+          if (payload?.avatarUrl) {
+            setAvatarUrl(payload.avatarUrl);
           }
 
           setScreen('home');

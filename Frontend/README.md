@@ -51,13 +51,25 @@ Lưu ý:
 - Thay `192.168.2.114` bằng IP thật của máy bạn.
 - Không dùng `localhost` hoặc `127.0.0.1` khi chạy trên điện thoại thật, vì lúc đó app sẽ hiểu là chính điện thoại.
 - Nếu backend đổi cổng, cập nhật lại cả `API_BASE_URL` và `API_PORT`.
+- Cấu hình thêm Cloudinary cho tính năng đổi ảnh đại diện (xem mục tiếp theo).
 
-### 4. Cài Expo Go trên điện thoại
+### 4. Cấu hình Cloudinary (Để đổi ảnh đại diện)
+1. Đăng ký/Đăng nhập [Cloudinary](https://cloudinary.com/).
+2. Lấy **Cloud Name** tại Dashboard.
+3. Vào **Settings -> Upload -> Add upload preset**.
+4. Chuyển **Signing Mode** sang **`Unsigned`**.
+5. Copy tên Preset và dán vào `.env`:
+   ```env
+   EXPO_PUBLIC_CLOUDINARY_URL=https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload
+   EXPO_PUBLIC_UPLOAD_PRESET=your_preset_name
+   ```
+
+### 5. Cài Expo Go trên điện thoại
 Tải ứng dụng `Expo Go`:
 - Android: cài từ Google Play
 - iPhone: cài từ App Store
 
-### 5. Chạy frontend
+### 6. Chạy frontend
 ```bash
 npm start
 ```
