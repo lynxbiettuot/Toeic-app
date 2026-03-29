@@ -20,6 +20,8 @@ export const getPublicFlashcardSets = async (page: number, limit: number, search
 
   const whereClause: Record<string, unknown> = {
     visibility: 'PUBLIC',
+    status: 'PUBLISHED',
+    warned_at: null,
     deleted_at: null
   };
 
@@ -75,6 +77,9 @@ export const getPublicFlashcardSetDetail = async (setId: number) => {
       description: true,
       card_count: true,
       visibility: true,
+      status: true,
+      warned_at: true,
+      deleted_at: true,
       user: { select: { id: true, full_name: true } },
       flashcards: {
         select: {
@@ -94,7 +99,7 @@ export const getPublicFlashcardSetDetail = async (setId: number) => {
     throw new Error('404: Set not found');
   }
 
-  if (set.visibility !== 'PUBLIC') {
+  if (set.visibility !== 'PUBLIC' || set.status !== 'PUBLISHED' || set.warned_at !== null || set.deleted_at !== null) {
     throw new Error('403: Set is not public');
   }
 
@@ -125,7 +130,12 @@ export const importFlashcardSet = async (sourceSetId: number, userId: number) =>
     throw new Error('404: Source set not found');
   }
 
-  if (sourceSet.visibility !== 'PUBLIC') {
+  if (
+    sourceSet.visibility !== 'PUBLIC' ||
+    sourceSet.status !== 'PUBLISHED' ||
+    sourceSet.warned_at !== null ||
+    sourceSet.deleted_at !== null
+  ) {
     throw new Error('403: Only PUBLIC sets can be imported');
   }
 

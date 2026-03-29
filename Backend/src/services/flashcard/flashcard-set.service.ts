@@ -27,7 +27,10 @@ export const createFlashcardSet = async (
       owner_user_id: userId,
       title,
       description,
-      visibility
+      visibility,
+      status: visibility === 'PUBLIC' ? 'PUBLISHED' : 'HIDDEN',
+      warned_at: null,
+      deleted_at: null
     }
   });
 };
@@ -39,18 +42,22 @@ export const updateFlashcardSet = async (
   description: string | null,
   visibility: 'PUBLIC' | 'PRIVATE'
 ) => {
-  const { error } = await ensureOwnership(setId, userId);
+  const { set, error } = await ensureOwnership(setId, userId);
 
   if (error) {
     throw new Error(`${error.statusCode}: ${error.message}`);
   }
+
+  // Warned sets are forced private until admin changes them.
+  const effectiveVisibility = set?.warned_at ? 'PRIVATE' : visibility;
 
   return prisma.flashcard_sets.update({
     where: { id: setId },
     data: {
       title,
       description,
-      visibility,
+      visibility: effectiveVisibility,
+      status: effectiveVisibility === 'PUBLIC' ? 'PUBLISHED' : 'HIDDEN',
       updated_at: new Date()
     }
   });

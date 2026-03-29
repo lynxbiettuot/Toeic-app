@@ -20,10 +20,8 @@ type WrongQuestion = {
   selected_option: string | null;
 };
 
-const MOCK_USER_ID = 1;
-
 export function WrongAnswerListScreen({ navigation, route }: any) {
-  const { examId, examTitle, sessionId, wrongQuestions = [] } = route.params;
+  const { examId, examTitle, sessionId, wrongQuestions = [], userId = 1 } = route.params;
   const [retaking, setRetaking] = useState(false);
 
   const handleRetakeWrong = async () => {
@@ -42,7 +40,7 @@ export function WrongAnswerListScreen({ navigation, route }: any) {
                 {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ userId: MOCK_USER_ID }),
+                  body: JSON.stringify({ userId }),
                 }
               );
               const data = await res.json();

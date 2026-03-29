@@ -345,19 +345,16 @@ export const getAdminExamList = async (req: Request, res: Response) => {
     const keyword = typeof req.query.search === "string" ? req.query.search.trim() : "";
     const status = typeof req.query.status === "string" ? req.query.status.trim().toUpperCase() : "";
     const year = typeof req.query.year === "string" ? Number.parseInt(req.query.year, 10) : undefined;
-    const includeDeleted = req.query.includeDeleted === "true";
 
     const where: Record<string, unknown> = {};
 
-    if (status === "DELETED") {
-      where.deleted_at = {
-        not: null,
+    if (status === "PRIVATE") {
+      where.status = {
+        in: ["DRAFT", "HIDDEN"],
       };
-    } else if (!includeDeleted) {
-      where.deleted_at = null;
-    }
-
-    if (VALID_EXAM_STATUSES.includes(status as (typeof VALID_EXAM_STATUSES)[number])) {
+    } else if (status === "PUBLIC") {
+      where.status = "PUBLISHED";
+    } else if (VALID_EXAM_STATUSES.includes(status as (typeof VALID_EXAM_STATUSES)[number])) {
       where.status = status;
     }
 
@@ -725,31 +722,78 @@ export const softDeleteExam = async (req: Request, res: Response) => {
       });
     }
 
-    const updated = await prisma.exam_sets.update({
-      where: {
-        id: examSetId,
-      },
-      data: {
-        status: "DELETED",
-        deleted_at: new Date(),
-      },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        deleted_at: true,
-      },
+    // Hard delete: delete all associated data
+    await prisma.$transaction(async (tx) => {
+      // Get all sessions for this exam to delete answers
+      const sessions = await tx.test_sessions.findMany({
+        where: { exam_set_id: examSetId },
+        select: { id: true },
+      });
+      const sessionIds = sessions.map((s) => s.id);
+
+      // Delete user answers
+      if (sessionIds.length > 0) {
+        await tx.user_answers.deleteMany({
+          where: {
+            session_id: { in: sessionIds },
+          },
+        });
+
+        // Delete session part scores
+        await tx.session_part_scores.deleteMany({
+          where: {
+            session_id: { in: sessionIds },
+          },
+        });
+      }
+
+      // Delete test sessions
+      await tx.test_sessions.deleteMany({
+        where: {
+          exam_set_id: examSetId,
+        },
+      });
+
+      // Delete answer options before deleting questions (FK constraint)
+      await tx.answer_options.deleteMany({
+        where: {
+          question: {
+            exam_set_id: examSetId,
+          },
+        },
+      });
+
+      // Delete questions
+      await tx.questions.deleteMany({
+        where: {
+          exam_set_id: examSetId,
+        },
+      });
+
+      // Delete question groups
+      await tx.question_groups.deleteMany({
+        where: {
+          exam_set_id: examSetId,
+        },
+      });
+
+      // Delete the exam set
+      await tx.exam_sets.delete({
+        where: {
+          id: examSetId,
+        },
+      });
     });
 
     return res.status(200).json({
-      message: "Xóa mềm đề thi thành công.",
+      message: "Xóa đề thi thành công.",
       statusCode: 200,
-      data: updated,
+      data: { id: examSetId },
     });
   } catch (error) {
-    console.error("Lỗi xóa mềm đề thi:", error);
+    console.error("Lỗi xóa đề thi:", error);
     return res.status(500).json({
-      message: "Không thể xóa mềm đề thi.",
+      message: "Không thể xóa đề thi.",
       error: error instanceof Error ? error.message : "Unknown error",
       statusCode: 500,
     });

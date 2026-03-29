@@ -156,7 +156,7 @@ const isReadingQuestion = (question: Pick<SessionQuestionRecord, "question_numbe
 const loadSessionData = async (examId: number, sessionId: number) => {
   const [exam, session] = await Promise.all([
     prisma.exam_sets.findFirst({
-      where: { id: examId, deleted_at: null },
+      where: { id: examId, deleted_at: null, status: "PUBLISHED" },
       select: {
         id: true,
         title: true,
@@ -244,6 +244,7 @@ export const getPublicExams = async (req: Request, res: Response) => {
     const exams = await prisma.exam_sets.findMany({
       where: {
         deleted_at: null,
+        status: "PUBLISHED",
       },
       orderBy: {
         created_at: "desc",
@@ -341,17 +342,19 @@ export const getExamDetails = async (req: Request, res: Response) => {
         thumbnail_url: true,
         duration_minutes: true,
         total_questions: true,
+        status: true,
       },
     });
 
-    if (!exam) {
+    if (!exam || exam.status !== "PUBLISHED") {
       return res.status(404).json({ message: "Không tìm thấy đề thi.", statusCode: 404 });
     }
 
+    const { status, ...data } = exam;
     return res.status(200).json({
       message: "Lấy chi tiết đề thi thành công.",
       statusCode: 200,
-      data: exam,
+      data,
     });
   } catch (error) {
     console.error("Lỗi lấy chi tiết đề thi:", error);
@@ -362,10 +365,21 @@ export const getExamDetails = async (req: Request, res: Response) => {
 export const getExamQuestions = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const examId = parseInt(String(id), 10);
+    
+    // First check if exam exists and is published
+    const exam = await prisma.exam_sets.findUnique({
+      where: { id: examId },
+      select: { status: true },
+    });
+
+    if (!exam || exam.status !== "PUBLISHED") {
+      return res.status(404).json({ message: "Không tìm thấy đề thi.", statusCode: 404 });
+    }
     
     // Fetch all questions and question groups associated with the exam
     const questions = await prisma.questions.findMany({
-      where: { exam_set_id: parseInt(String(id), 10) },
+      where: { exam_set_id: examId },
       include: {
         answers: {
           select: {
@@ -406,15 +420,37 @@ export const startTestSession = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const examId = parseInt(String(id), 10);
+    if (Number.isNaN(examId)) {
+      return res.status(400).json({ message: "examId không hợp lệ.", statusCode: 400 });
+    }
     
     // In a real application, user_id should be extracted from auth middleware (req.user.id).
     // For now, assuming a mock user with ID 1 if not provided, or provided in body.
-    const userId = req.body.userId || 1; 
+    const userId = Number(req.body.userId || 1);
+
+    const [exam, questionCount] = await Promise.all([
+      prisma.exam_sets.findUnique({
+        where: { id: examId },
+        select: { id: true, title: true, status: true },
+      }),
+      prisma.questions.count({ where: { exam_set_id: examId } }),
+    ]);
+
+    if (!exam || exam.status !== "PUBLISHED") {
+      return res.status(404).json({ message: "Không tìm thấy đề thi.", statusCode: 404 });
+    }
+
+    if (questionCount === 0) {
+      return res.status(400).json({
+        message: "Đề thi này chưa có câu hỏi. Vui lòng chọn đề khác.",
+        statusCode: 400,
+      });
+    }
 
     const session = await prisma.test_sessions.create({
       data: {
         user_id: userId,
-        exam_set_id: examId,
+        exam_set_id: exam.id,
         started_at: new Date(),
         status: "IN_PROGRESS",
       },

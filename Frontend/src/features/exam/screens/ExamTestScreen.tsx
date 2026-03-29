@@ -17,11 +17,12 @@ import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
 
 export function ExamTestScreen({ navigation, route }: any) {
-  const { examId, sessionId, duration, questionFilter } = route.params;
+  const { examId, sessionId, duration, questionFilter, userId = 1 } = route.params;
   const isPracticeMode = !!(questionFilter && Array.isArray(questionFilter) && questionFilter.length > 0);
   const [questions, setQuestions] = useState<any[]>([]);
   const [pages, setPages] = useState<any[][]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Timer state
   const [timeLeft, setTimeLeft] = useState(duration * 60);
@@ -52,46 +53,66 @@ export function ExamTestScreen({ navigation, route }: any) {
       .filter(Boolean)
       .slice(0, 3);
 
-  useEffect(() => {
+  const fetchQuestions = () => {
+    setLoading(true);
+    setLoadError(null);
+
     fetch(`${API_BASE_URL}/exams/${examId}/questions`)
-      .then((res) => res.json())
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok || data?.statusCode !== 200 || !Array.isArray(data?.data?.questions)) {
+          throw new Error(data?.message || "Không thể tải câu hỏi.");
+        }
+        return data;
+      })
       .then((data) => {
-        if (data.statusCode === 200 && data.data?.questions) {
-          // Nếu có questionFilter, chỉ giữ lại các câu trong danh sách
-          const allQuestions: any[] = data.data.questions;
-          const filtered = questionFilter && Array.isArray(questionFilter)
-            ? allQuestions.filter((q: any) => (questionFilter as number[]).includes(q.id))
-            : allQuestions;
+        // Nếu có questionFilter, chỉ giữ lại các câu trong danh sách
+        const allQuestions: any[] = data.data.questions;
+        const filtered = questionFilter && Array.isArray(questionFilter)
+          ? allQuestions.filter((q: any) => (questionFilter as number[]).includes(q.id))
+          : allQuestions;
 
-          setQuestions(filtered);
+        setQuestions(filtered);
 
-          // Build pages correctly
-          const groupedPages: any[][] = [];
-          let currentGroup: any[] = [];
-          
-          filtered.forEach((q: any) => {
-            if (currentGroup.length === 0) {
+        // Build pages correctly
+        const groupedPages: any[][] = [];
+        let currentGroup: any[] = [];
+
+        filtered.forEach((q: any) => {
+          if (currentGroup.length === 0) {
+            currentGroup.push(q);
+          } else {
+            const lastQ = currentGroup[0];
+            // Group together if they share the same group_id
+            if (q.group_id && q.group_id === lastQ.group_id) {
               currentGroup.push(q);
             } else {
-              const lastQ = currentGroup[0];
-              // Group together if they share the same group_id
-              if (q.group_id && q.group_id === lastQ.group_id) {
-                currentGroup.push(q);
-              } else {
-                groupedPages.push(currentGroup);
-                currentGroup = [q];
-              }
+              groupedPages.push(currentGroup);
+              currentGroup = [q];
             }
-          });
-          if (currentGroup.length > 0) {
-            groupedPages.push(currentGroup);
           }
+        });
+        if (currentGroup.length > 0) {
+          groupedPages.push(currentGroup);
+        }
 
-          setPages(groupedPages);
+        setPages(groupedPages);
+
+        if (groupedPages.length === 0) {
+          setLoadError("Đề thi chưa có câu hỏi hoặc không có câu phù hợp để hiển thị.");
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => {
+        console.error(err);
+        setQuestions([]);
+        setPages([]);
+        setLoadError(err instanceof Error ? err.message : "Lỗi kết nối mạng.");
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchQuestions();
   }, [examId]);
 
   useEffect(() => {
@@ -223,7 +244,7 @@ export function ExamTestScreen({ navigation, route }: any) {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ answers: payload, isPractice: isPracticeMode })
+        body: JSON.stringify({ answers: payload, isPractice: isPracticeMode, userId })
       });
       const data = await res.json();
       
@@ -288,10 +309,25 @@ export function ExamTestScreen({ navigation, route }: any) {
     }
   };
 
-  if (loading || pages.length === 0) {
+  if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
         <ActivityIndicator size="large" color={AUTH_ACTION_COLOR} />
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.container, styles.center, styles.errorWrap]}>
+        <Text style={styles.errorTitle}>Không tải được bài thi</Text>
+        <Text style={styles.errorText}>{loadError}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={fetchQuestions}>
+          <Text style={styles.retryBtnText}>Thử lại</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.backBtnText}>Quay lại</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -517,6 +553,25 @@ export function ExamTestScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   center: { justifyContent: "center", alignItems: "center" },
+  errorWrap: { paddingHorizontal: 24 },
+  errorTitle: { fontSize: 20, fontWeight: "700", color: "#1f2937", marginBottom: 8 },
+  errorText: { fontSize: 15, color: "#6b7280", textAlign: "center", marginBottom: 16 },
+  retryBtn: {
+    backgroundColor: AUTH_ACTION_COLOR,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  retryBtnText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  backBtn: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  backBtnText: { color: "#374151", fontSize: 15, fontWeight: "600" },
   header: {
     flexDirection: "row",
     alignItems: "center",

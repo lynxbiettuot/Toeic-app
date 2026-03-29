@@ -52,6 +52,14 @@ export const getSystemVocabSets = async (req: Request, res: Response) => {
           },
           visibility: "PUBLIC",
         },
+        {
+          owner_user_id: {
+            not: null,
+          },
+          warned_at: {
+            not: null,
+          },
+        },
       ],
     };
 
@@ -157,7 +165,25 @@ export const getSystemVocabSetDetail = async (req: Request, res: Response) => {
     const set = await prisma.flashcard_sets.findFirst({
       where: {
         id: setId,
-        is_system: true,
+        OR: [
+          {
+            is_system: true,
+          },
+          {
+            owner_user_id: {
+              not: null,
+            },
+            visibility: "PUBLIC",
+          },
+          {
+            owner_user_id: {
+              not: null,
+            },
+            warned_at: {
+              not: null,
+            },
+          },
+        ],
       },
       select: {
         id: true,
@@ -250,7 +276,7 @@ export const createSystemVocabSet = async (req: Request, res: Response) => {
           title,
           description,
           cover_image_url: coverImageUrl,
-          status: "DRAFT",
+          status: "HIDDEN",
           visibility: "PUBLIC",
           is_system: true,
           owner_admin_id: Number.isNaN(ownerAdminId) ? null : ownerAdminId,
@@ -410,7 +436,7 @@ export const importSystemVocabSet = async (req: Request, res: Response) => {
         data: {
           title,
           description: typeof req.body.description === "string" ? req.body.description.trim() : null,
-          status: "DRAFT",
+          status: "HIDDEN",
           visibility: "PUBLIC",
           is_system: true,
           card_count: cards.length,
@@ -430,7 +456,7 @@ export const importSystemVocabSet = async (req: Request, res: Response) => {
     });
 
     return res.status(200).json({
-      message: "Import bộ từ vựng thành công, dữ liệu đã lưu ở trạng thái Nháp.",
+      message: "Import bộ từ vựng thành công, dữ liệu đã lưu ở trạng thái Private.",
       statusCode: 200,
       data: {
         setId: created.id,
@@ -592,13 +618,6 @@ export const updateSystemVocabSetStatus = async (req: Request, res: Response) =>
       return res.status(404).json({ message: "Không tìm thấy bộ từ vựng.", statusCode: 404 });
     }
 
-    if (targetSet.owner_user_id) {
-      return res.status(403).json({
-        message: "Bộ từ vựng do user đăng chỉ cho phép cảnh báo/xóa, không cho đổi trạng thái.",
-        statusCode: 403,
-      });
-    }
-
     if (!VALID_SET_STATUSES.includes(status as (typeof VALID_SET_STATUSES)[number])) {
       return res.status(400).json({
         message: "status chỉ chấp nhận DRAFT, PUBLISHED hoặc HIDDEN.",
@@ -606,12 +625,31 @@ export const updateSystemVocabSetStatus = async (req: Request, res: Response) =>
       });
     }
 
+    const isUserSet = !!targetSet.owner_user_id;
+
+    const updateData: {
+      status: string;
+      deleted_at: null;
+      visibility?: "PUBLIC" | "PRIVATE";
+      warned_at?: null;
+    } = {
+      status,
+      deleted_at: null,
+    };
+
+    if (isUserSet) {
+      if (status === "PUBLISHED") {
+        updateData.visibility = "PUBLIC";
+      } else {
+        updateData.visibility = "PRIVATE";
+      }
+      // Any manual status change by admin clears warning flag.
+      updateData.warned_at = null;
+    }
+
     const updated = await prisma.flashcard_sets.update({
       where: { id: setId },
-      data: {
-        status,
-        deleted_at: null,
-      },
+      data: updateData,
       select: {
         id: true,
         title: true,
@@ -698,7 +736,12 @@ export const warnUserVocabSet = async (req: Request, res: Response) => {
     const now = new Date();
     await prisma.flashcard_sets.update({
       where: { id: setId },
-      data: { warned_at: now },
+      data: {
+        warned_at: now,
+        // Keep warned sets visible on admin side while hiding from user public discovery.
+        visibility: "PRIVATE",
+        status: "HIDDEN",
+      },
     });
 
     return res.status(200).json({

@@ -11,8 +11,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
 
-const MOCK_USER_ID = 1;
-
 type WrongExamGroup = {
   exam_id: number;
   exam_title: string;
@@ -32,16 +30,19 @@ type WrongExamGroup = {
 export function WrongAnswerHistoryScreen({
   navigation,
   onBack,
+  route,
 }: {
   navigation?: any;
   onBack?: () => void;
+  route?: any;
 }) {
+  const userId = route?.params?.userId ?? 1;
   const [groups, setGroups] = useState<WrongExamGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/exams/wrong-answers?userId=${MOCK_USER_ID}`)
+    fetch(`${API_BASE_URL}/exams/wrong-answers?userId=${userId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.statusCode === 200 && Array.isArray(data.data)) {

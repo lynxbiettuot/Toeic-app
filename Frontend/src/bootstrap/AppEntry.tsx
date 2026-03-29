@@ -57,7 +57,10 @@ export function AppEntry() {
 
   const navigationShim = {
     navigate: (screenName: string, params?: any) => {
-      if (params) setExamParams((prev) => ({ ...prev, ...params }));
+      // Always include userId in examParams for consistency across all exam screens
+      if (params || screenName.includes('Exam') || screenName.includes('Wrong')) {
+        setExamParams((prev) => ({ ...prev, ...params, userId }));
+      }
       if (screenName === 'ExamIntroScreen') setScreen('exam-intro');
       if (screenName === 'ExamListScreen') setScreen('exam-list');
       if (screenName === 'ExamResultScreen') setScreen('exam-result');
@@ -71,7 +74,10 @@ export function AppEntry() {
       if (screenName === 'ExamTestScreen') setScreen('exam-test');
     },
     replace: (screenName: string, params?: any) => {
-      if (params) setExamParams((prev) => ({ ...prev, ...params }));
+      // Always include userId in examParams for consistency across all exam screens
+      if (params || screenName.includes('Exam') || screenName.includes('Wrong')) {
+        setExamParams((prev) => ({ ...prev, ...params, userId }));
+      }
       if (screenName === 'ExamTestScreen') setScreen('exam-test');
       if (screenName === 'ExamResultScreen') setScreen('exam-result');
       if (screenName === 'ExamSessionPartsScreen') setScreen('exam-session-parts');
@@ -188,6 +194,7 @@ export function AppEntry() {
     return (
       <WrongAnswerHistoryScreen
         navigation={navigationShim}
+        route={{ params: examParams }}
         onBack={() => setScreen('home')}
       />
     );
@@ -201,6 +208,7 @@ export function AppEntry() {
     return (
       <ExamListScreen
         navigation={navigationShim}
+        route={{ params: examParams }}
         onBack={() => setScreen('home')}
       />
     );
