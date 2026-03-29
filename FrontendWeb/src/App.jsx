@@ -11,11 +11,18 @@ import {
 } from "react-router-dom";
 import * as XLSX from "xlsx";
 
-const ADMIN_CREDENTIALS = {
-  email: "admin@gmail.com",
-  password: "1234",
-  name: "Tài khoản admin",
-};
+const ADMIN_ACCOUNTS = [
+  {
+    email: "admin@gmail.com",
+    password: "1234",
+    name: "Admin mặc định",
+  },
+  {
+    email: "manager@gmail.com",
+    password: "1234",
+    name: "Admin quản lý",
+  },
+];
 
 const API_ROOT = "http://localhost:3000/admin";
 const EXAM_API_BASE_URL = `${API_ROOT}/exams`;
@@ -23,21 +30,19 @@ const DASHBOARD_API_BASE_URL = `${API_ROOT}/dashboard`;
 const VOCAB_API_BASE_URL = `${API_ROOT}/vocab-sets`;
 
 const EXAM_STATUS_FILTERS = [
-  { value: "ACTIVE", label: "Mặc định (ẩn đề đã xóa)" },
-  { value: "ALL", label: "Tất cả trạng thái" },
-  { value: "DRAFT", label: "Nháp" },
-  { value: "PUBLISHED", label: "Công khai" },
-  { value: "HIDDEN", label: "Tạm ẩn" },
-  { value: "DELETED", label: "Đã xóa" },
+  { value: "ACTIVE", label: "Mặc định" },
+  { value: "PRIVATE", label: "Private" },
+  { value: "PUBLIC", label: "Public" },
 ];
 
 const VOCAB_STATUS_FILTERS = [
   { value: "ALL", label: "Tất cả trạng thái" },
-  { value: "DRAFT", label: "Nháp" },
-  { value: "PUBLISHED", label: "Công khai" },
-  { value: "HIDDEN", label: "Tạm ẩn" },
-  { value: "DELETED", label: "Đã xóa" },
+  { value: "PRIVATE", label: "Private" },
+  { value: "PUBLIC", label: "Public" },
+  { value: "WARNING", label: "Cảnh báo" },
 ];
+
+const TABLE_PAGE_SIZE = 5;
 
 const apiFetchJson = async (url, options) => {
   const response = await fetch(url, options);
@@ -64,7 +69,8 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="dashboard" element={<DashboardPage mode="overview" />} />
+        <Route path="users" element={<DashboardPage mode="users" />} />
         <Route path="exams" element={<ExamListPage />} />
         <Route path="exams/new" element={<ExamCreatePage />} />
         <Route path="exams/import-excel" element={<ImportExcelPage />} />
@@ -78,14 +84,16 @@ function App() {
 function LoginPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    email: ADMIN_CREDENTIALS.email,
-    password: ADMIN_CREDENTIALS.password,
+    email: ADMIN_ACCOUNTS[0].email,
+    password: ADMIN_ACCOUNTS[0].password,
   });
   const [error, setError] = useState("");
 
   const helperText = useMemo(
     () =>
-      `${ADMIN_CREDENTIALS.name}: ${ADMIN_CREDENTIALS.email} / ${ADMIN_CREDENTIALS.password}`,
+      ADMIN_ACCOUNTS.map(
+        (account) => `${account.name}: ${account.email} / ${account.password}`,
+      ).join("\n"),
     []
   );
 
@@ -98,10 +106,13 @@ function LoginPage() {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    if (
-      form.email === ADMIN_CREDENTIALS.email &&
-      form.password === ADMIN_CREDENTIALS.password
-    ) {
+    const matchedAccount = ADMIN_ACCOUNTS.find(
+      (account) =>
+        account.email.toLowerCase() === form.email.trim().toLowerCase() &&
+        account.password === form.password,
+    );
+
+    if (matchedAccount) {
       navigate("/admin/dashboard");
       return;
     }
@@ -179,8 +190,13 @@ function AdminLayout() {
             <nav className="sidebar-nav">
               <NavButton
                 to="/admin/dashboard"
-                label="Dashboard & Người dùng"
+                label="Dashboard"
                 active={location.pathname === "/admin/dashboard"}
+              />
+              <NavButton
+                to="/admin/users"
+                label="Quản lý người dùng"
+                active={location.pathname === "/admin/users"}
               />
               <NavButton
                 to="/admin/exams"
@@ -216,8 +232,8 @@ function AdminLayout() {
   );
 }
 
-function DashboardPage() {
-  const [tab, setTab] = useState("overview");
+function DashboardPage({ mode = "overview" }) {
+  const isOverview = mode === "overview";
   const [range, setRange] = useState("month");
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
@@ -226,6 +242,7 @@ function DashboardPage() {
   const [selectedUserSet, setSelectedUserSet] = useState(null);
   const [selectedSetWordId, setSelectedSetWordId] = useState(null);
   const [setWordSearch, setSetWordSearch] = useState("");
+  const [currentUserPage, setCurrentUserPage] = useState(1);
   const [userActionMessage, setUserActionMessage] = useState("");
   const [overview, setOverview] = useState({
     summary: {
@@ -240,7 +257,7 @@ function DashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (tab !== "overview") {
+    if (!isOverview) {
       return;
     }
 
@@ -255,10 +272,17 @@ function DashboardPage() {
     };
 
     loadOverview();
-  }, [tab, range]);
+  }, [isOverview, range]);
 
   useEffect(() => {
-    if (tab !== "users") {
+    setSelectedUserId(null);
+    setProfile(null);
+    setSelectedUserSet(null);
+    setSelectedSetWordId(null);
+    setSetWordSearch("");
+    setUserActionMessage("");
+
+    if (isOverview) {
       return;
     }
 
@@ -268,19 +292,20 @@ function DashboardPage() {
         const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
         const result = await apiFetchJson(`${DASHBOARD_API_BASE_URL}/users${query}`);
         setUsers(result.data || []);
-
-        const firstId = (result.data || [])[0]?.id ?? null;
-        setSelectedUserId((current) => current ?? firstId);
       } catch (requestError) {
         setError(requestError instanceof Error ? requestError.message : "Không thể tải danh sách user.");
       }
     };
 
     loadUsers();
-  }, [tab, search]);
+  }, [isOverview, search]);
 
   useEffect(() => {
-    if (tab !== "users" || !selectedUserId) {
+    setCurrentUserPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (isOverview || !selectedUserId) {
       setProfile(null);
       return;
     }
@@ -300,22 +325,34 @@ function DashboardPage() {
     };
 
     loadProfile();
-  }, [tab, selectedUserId]);
+  }, [isOverview, selectedUserId]);
 
   const topExamMax = Math.max(...overview.topExams.map((item) => item.attempts), 1);
+  const topExamTotalAttempts = overview.topExams.reduce((sum, item) => sum + Number(item.attempts || 0), 0);
   const barData = overview.topExams.map((item) => ({
     label: item.title,
+    attempts: item.attempts,
+    percent: topExamTotalAttempts > 0 ? Math.round((item.attempts / topExamTotalAttempts) * 100) : 0,
     height: `${Math.max(12, Math.round((item.attempts / topExamMax) * 100))}%`,
   }));
 
-  const scorePoints = overview.scoreDistribution.map((item, index) => {
-    const x = 8 + index * 84;
-    const maxCount = Math.max(...overview.scoreDistribution.map((entry) => entry.count), 1);
-    const y = 90 - Math.round((item.count / maxCount) * 70);
-    return `${x},${y}`;
+  const completionRate = Math.max(0, Math.min(100, Number(overview.summary.completionRate ?? 0)));
+
+  const scoreMaxCount = Math.max(...overview.scoreDistribution.map((entry) => entry.count), 1);
+  const scoreChartData = overview.scoreDistribution.map((item, index) => {
+    const x = 44 + index * 94;
+    const y = 174 - Math.round((item.count / scoreMaxCount) * 128);
+    return {
+      ...item,
+      x,
+      y,
+    };
   });
 
-  const linePoints = scorePoints.length > 1 ? scorePoints.join(" ") : "8,80 428,80";
+  const linePoints =
+    scoreChartData.length > 1
+      ? scoreChartData.map((item) => `${item.x},${item.y}`).join(" ")
+      : "44,174 420,174";
 
   const personalTrendPoints = useMemo(() => {
     const progress = profile?.progress ?? [];
@@ -405,7 +442,6 @@ function DashboardPage() {
   const handleViewUserFlashcardSet = async (setId) => {
     if (!selectedUserId) {
       return;
-              {userActionMessage ? <p className="import-status info">{userActionMessage}</p> : null}
     }
 
     try {
@@ -417,6 +453,14 @@ function DashboardPage() {
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Không thể tải bộ flashcard của user.");
     }
+  };
+
+  const closeUserProfileModal = () => {
+    setSelectedUserId(null);
+    setSelectedUserSet(null);
+    setSelectedSetWordId(null);
+    setSetWordSearch("");
+    setUserActionMessage("");
   };
 
   const filteredSetWords = useMemo(() => {
@@ -438,29 +482,26 @@ function DashboardPage() {
     [selectedUserSet, selectedSetWordId],
   );
 
+  const totalUserPages = Math.max(1, Math.ceil(users.length / TABLE_PAGE_SIZE));
+
+  useEffect(() => {
+    if (currentUserPage > totalUserPages) {
+      setCurrentUserPage(totalUserPages);
+    }
+  }, [currentUserPage, totalUserPages]);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (currentUserPage - 1) * TABLE_PAGE_SIZE;
+    return users.slice(start, start + TABLE_PAGE_SIZE);
+  }, [users, currentUserPage]);
+
   return (
     <section className="exam-screen">
       <div className="dashboard-heading-row">
-        <h2>Dashboard & Người dùng</h2>
-        <div className="dashboard-tabs">
-          <button
-            className={`filter-chip ${tab === "overview" ? "active-chip" : ""}`}
-            type="button"
-            onClick={() => setTab("overview")}
-          >
-            Tab 1: Thống kê tổng quan
-          </button>
-          <button
-            className={`filter-chip ${tab === "users" ? "active-chip" : ""}`}
-            type="button"
-            onClick={() => setTab("users")}
-          >
-            Tab 2: Quản lý User
-          </button>
-        </div>
+        <h2>{isOverview ? "Dashboard" : "Quản lý User"}</h2>
       </div>
 
-      {tab === "overview" ? (
+      {isOverview ? (
         <>
           <div className="exam-toolbar compact-toolbar">
             <select
@@ -486,37 +527,69 @@ function DashboardPage() {
           <div className="chart-grid">
             <section className="chart-card">
               <h3>Top 5 bộ đề được làm nhiều nhất</h3>
-              <div className="bar-chart">
-                <div className="chart-axis axis-y" />
-                <div className="chart-axis axis-x" />
-                <div className="bar-list">
-                  {barData.map((item, index) => (
-                    <div className="bar-item" key={item.label}>
-                      <div className={`bar-fill color-${index + 1}`} style={{ height: item.height }} />
-                      <span>{item.label}</span>
-                    </div>
-                  ))}
+              {barData.length === 0 ? (
+                <p className="empty-state">Chưa có dữ liệu lượt thi cho khoảng thời gian này.</p>
+              ) : (
+                <div className="bar-chart enhanced">
+                  <div className="chart-meta-row">
+                    <span>Đơn vị: lượt thi</span>
+                    <strong>Tổng top 5: {topExamTotalAttempts}</strong>
+                  </div>
+                  <div className="bar-list enhanced">
+                    {barData.map((item, index) => (
+                      <div className="bar-item enhanced" key={item.label}>
+                        <span className="bar-value">{item.attempts}</span>
+                        <div className={`bar-fill color-${index + 1}`} style={{ height: item.height }} />
+                        <span className="bar-percent">{item.percent}%</span>
+                        <span className="bar-label" title={item.label}>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </section>
 
             <section className="chart-card pie-card">
               <h3>Tỷ lệ hoàn thành bài thi</h3>
-              <div className="pie-chart">
-                <div className="pie-center">{overview.summary.completionRate ?? 0}%</div>
+              <div className="pie-chart" style={{ "--completion-rate": completionRate }}>
+                <div className="pie-center">
+                  <strong>{completionRate}%</strong>
+                  <span>Hoàn thành</span>
+                </div>
+              </div>
+              <div className="pie-legend">
+                <span><i className="dot done" /> Đã nộp bài</span>
+                <span><i className="dot pending" /> Chưa nộp</span>
               </div>
             </section>
           </div>
 
           <section className="chart-card line-card">
             <h3>Phổ điểm người dùng</h3>
-            <div className="line-chart">
-              <svg viewBox="0 0 440 110" preserveAspectRatio="none">
-                <polyline points={linePoints} />
-              </svg>
-              <div className="chart-axis axis-y" />
-              <div className="chart-axis axis-x" />
-            </div>
+            {scoreChartData.length === 0 ? (
+              <p className="empty-state">Chưa có dữ liệu điểm để hiển thị phổ điểm.</p>
+            ) : (
+              <div className="line-chart enhanced">
+                <svg viewBox="0 0 520 220" preserveAspectRatio="none">
+                  <line x1="44" y1="24" x2="44" y2="174" className="line-axis" />
+                  <line x1="44" y1="174" x2="500" y2="174" className="line-axis" />
+
+                  <polyline points={linePoints} className="line-path" />
+
+                  {scoreChartData.map((item) => (
+                    <g key={item.label}>
+                      <circle cx={item.x} cy={item.y} r="4" className="line-point" />
+                      <text x={item.x} y={item.y - 10} textAnchor="middle" className="line-value-label">
+                        {item.count}
+                      </text>
+                      <text x={item.x} y="196" textAnchor="middle" className="line-x-label">
+                        {item.label}
+                      </text>
+                    </g>
+                  ))}
+                </svg>
+              </div>
+            )}
           </section>
         </>
       ) : (
@@ -551,9 +624,9 @@ function DashboardPage() {
                     </td>
                   </tr>
                 ) : (
-                  users.map((user, index) => (
+                  paginatedUsers.map((user, index) => (
                     <tr key={user.id}>
-                      <td>{index + 1}</td>
+                      <td>{(currentUserPage - 1) * TABLE_PAGE_SIZE + index + 1}</td>
                       <td>{user.fullName}</td>
                       <td>{user.email}</td>
                       <td>{user.registerDate}</td>
@@ -574,182 +647,197 @@ function DashboardPage() {
             </table>
           </div>
 
+          {users.length > 0 ? (
+            <PaginationControls
+              currentPage={currentUserPage}
+              totalPages={totalUserPages}
+              onPageChange={setCurrentUserPage}
+            />
+          ) : null}
+
           {selectedUserId ? (
-            <section className="chart-card profile-card">
-              <h3>Hồ sơ học viên: {profile?.user?.fullName ?? "-"}</h3>
+            <div className="user-modal-overlay" onClick={closeUserProfileModal}>
+              <section className="chart-card profile-card user-modal" onClick={(event) => event.stopPropagation()}>
+                <div className="question-list-head">
+                  <h3>Hồ sơ học viên: {profile?.user?.fullName ?? "-"}</h3>
+                  <button className="table-inline-button" type="button" onClick={closeUserProfileModal}>
+                    Đóng
+                  </button>
+                </div>
 
-              <p className="detail-label">Lịch sử thi thử</p>
-              <div className="table-shell">
-                <table className="exam-table">
-                  <thead>
-                    <tr>
-                      <th>Đề thi</th>
-                      <th>Reading</th>
-                      <th>Listening</th>
-                      <th>Thời gian làm bài</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(profile?.tests ?? []).map((item) => (
-                      <tr key={`${item.id}-${item.exam}`}>
-                        <td>{item.exam}</td>
-                        <td>{item.reading}</td>
-                        <td>{item.listening}</td>
-                        <td>{item.duration}</td>
+                <p className="detail-label">Lịch sử thi thử</p>
+                <div className="table-shell">
+                  <table className="exam-table">
+                    <thead>
+                      <tr>
+                        <th>Đề thi</th>
+                        <th>Reading</th>
+                        <th>Listening</th>
+                        <th>Thời gian làm bài</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {(profile?.tests ?? []).map((item) => (
+                        <tr key={`${item.id}-${item.exam}`}>
+                          <td>{item.exam}</td>
+                          <td>{item.reading}</td>
+                          <td>{item.listening}</td>
+                          <td>{item.duration}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              <p className="detail-label">Thống kê cá nhân (xu hướng điểm)</p>
-              <div className="line-chart personal-line-chart">
-                <svg viewBox="0 0 440 110" preserveAspectRatio="none">
-                  <polyline points={personalTrendPoints || "8,80 428,80"} />
-                </svg>
-                <div className="chart-axis axis-y" />
-                <div className="chart-axis axis-x" />
-              </div>
+                <p className="detail-label">Thống kê cá nhân (xu hướng điểm)</p>
+                <div className="line-chart personal-line-chart">
+                  <svg viewBox="0 0 440 110" preserveAspectRatio="none">
+                    <polyline points={personalTrendPoints || "8,80 428,80"} />
+                  </svg>
+                  <div className="chart-axis axis-y" />
+                  <div className="chart-axis axis-x" />
+                </div>
 
-              <p className="detail-label">Kho flashcard cá nhân (chỉ xem, cho phép xóa)</p>
-              <div className="action-grid">
-                {(profile?.flashcards ?? []).length === 0 ? (
-                  <p className="empty-state">User chưa có bộ flashcard public.</p>
-                ) : (
-                  (profile?.flashcards ?? []).map((item) => (
-                    <div className="action-chip" key={item.id}>
-                      <span>
-                        {item.title} ({item.type}) - {item.cardCount} thẻ
-                      </span>
+                <p className="detail-label">Kho flashcard cá nhân (chỉ xem, cho phép xóa)</p>
+                <div className="action-grid">
+                  {(profile?.flashcards ?? []).length === 0 ? (
+                    <p className="empty-state">User chưa có bộ flashcard public.</p>
+                  ) : (
+                    (profile?.flashcards ?? []).map((item) => (
+                      <div className="action-chip" key={item.id}>
+                        <span>
+                          {item.title} ({item.type}) - {item.cardCount} thẻ
+                        </span>
+                        <div className="table-action-group">
+                          <button
+                            className="table-inline-button"
+                            type="button"
+                            onClick={() => handleViewUserFlashcardSet(item.id)}
+                          >
+                            Xem bộ
+                          </button>
+                          <button
+                            className="table-inline-button"
+                            type="button"
+                            disabled={!!item.warnedAt}
+                            onClick={() => handleWarnUserFlashcard(item.id)}
+                          >
+                            {item.warnedAt ? "Đã cảnh báo" : "Cảnh báo"}
+                          </button>
+                          <button
+                            className="table-inline-button danger"
+                            type="button"
+                            onClick={() => handleDeleteUserFlashcard(item.id)}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {selectedUserSet ? (
+                  <section className="chart-card profile-card">
+                    <div className="question-list-head">
+                      <h3>Nội dung bộ: {selectedUserSet.title}</h3>
                       <div className="table-action-group">
                         <button
                           className="table-inline-button"
                           type="button"
-                          onClick={() => handleViewUserFlashcardSet(item.id)}
+                          disabled={!!selectedUserSet.warnedAt}
+                          onClick={() => handleWarnUserFlashcard(selectedUserSet.id)}
                         >
-                          Xem bộ
-                        </button>
-                        <button
-                          className="table-inline-button"
-                          type="button"
-                          disabled={!!item.warnedAt}
-                          onClick={() => handleWarnUserFlashcard(item.id)}
-                        >
-                          {item.warnedAt ? "Đã cảnh báo" : "Cảnh báo"}
+                          {selectedUserSet.warnedAt ? "Đã cảnh báo" : "Cảnh báo"} người dùng
                         </button>
                         <button
                           className="table-inline-button danger"
                           type="button"
-                          onClick={() => handleDeleteUserFlashcard(item.id)}
+                          onClick={() => handleDeleteUserFlashcard(selectedUserSet.id)}
                         >
-                          Xóa
+                          Xóa bộ này
                         </button>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
 
-              {selectedUserSet ? (
-                <section className="chart-card profile-card">
-                  <div className="question-list-head">
-                    <h3>Nội dung bộ: {selectedUserSet.title}</h3>
-                    <div className="table-action-group">
-                      <button
-                        className="table-inline-button"
-                        type="button"
-                        disabled={!!selectedUserSet.warnedAt}
-                        onClick={() => handleWarnUserFlashcard(selectedUserSet.id)}
-                      >
-                        {selectedUserSet.warnedAt ? "Đã cảnh báo" : "Cảnh báo"} người dùng
-                      </button>
-                      <button
-                        className="table-inline-button danger"
-                        type="button"
-                        onClick={() => handleDeleteUserFlashcard(selectedUserSet.id)}
-                      >
-                        Xóa bộ này
-                      </button>
-                    </div>
-                  </div>
+                    {selectedSetWord ? (
+                      <div className="answer-block">
+                        <p className="detail-label">Chi tiết từ vựng</p>
+                        <DetailRow label="Từ vựng" value={selectedSetWord.word || "-"} />
+                        <DetailRow label="Định nghĩa" value={selectedSetWord.definition || "-"} />
+                        <DetailRow label="Loại từ" value={selectedSetWord.word_type || "-"} />
+                        <DetailRow label="Phiên âm" value={selectedSetWord.pronunciation || "-"} />
+                        <DetailRow label="Ví dụ" value={selectedSetWord.example || "-"} />
+                        <UrlDetailRow label="URL ảnh" value={selectedSetWord.image_url} mediaType="image" />
+                        <UrlDetailRow label="URL audio" value={selectedSetWord.audio_url} mediaType="audio" />
 
-                  {selectedSetWord ? (
-                    <div className="answer-block">
-                      <p className="detail-label">Chi tiết từ vựng</p>
-                      <DetailRow label="Từ vựng" value={selectedSetWord.word || "-"} />
-                      <DetailRow label="Định nghĩa" value={selectedSetWord.definition || "-"} />
-                      <DetailRow label="Loại từ" value={selectedSetWord.word_type || "-"} />
-                      <DetailRow label="Phiên âm" value={selectedSetWord.pronunciation || "-"} />
-                      <DetailRow label="Ví dụ" value={selectedSetWord.example || "-"} />
-                      <UrlDetailRow label="URL ảnh" value={selectedSetWord.image_url} mediaType="image" />
-                      <UrlDetailRow label="URL audio" value={selectedSetWord.audio_url} mediaType="audio" />
+                        <button
+                          className="table-inline-button"
+                          type="button"
+                          onClick={() => setSelectedSetWordId(null)}
+                        >
+                          Quay lại bảng từ
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          className="exam-search"
+                          type="text"
+                          placeholder="Tìm từ trong bộ flashcard"
+                          value={setWordSearch}
+                          onChange={(event) => setSetWordSearch(event.target.value)}
+                        />
 
-                      <button
-                        className="table-inline-button"
-                        type="button"
-                        onClick={() => setSelectedSetWordId(null)}
-                      >
-                        Quay lại bảng từ
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <input
-                        className="exam-search"
-                        type="text"
-                        placeholder="Tìm từ trong bộ flashcard"
-                        value={setWordSearch}
-                        onChange={(event) => setSetWordSearch(event.target.value)}
-                      />
-
-                      <div className="table-shell">
-                        <table className="exam-table">
-                          <thead>
-                            <tr>
-                              <th>STT</th>
-                              <th>Từ vựng</th>
-                              <th>Loại từ</th>
-                              <th>Định nghĩa</th>
-                              <th>Chi tiết</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredSetWords.length === 0 ? (
+                        <div className="table-shell">
+                          <table className="exam-table">
+                            <thead>
                               <tr>
-                                <td colSpan="5" className="empty-state">
-                                  Không có từ phù hợp.
-                                </td>
+                                <th>STT</th>
+                                <th>Từ vựng</th>
+                                <th>Loại từ</th>
+                                <th>Định nghĩa</th>
+                                <th>Chi tiết</th>
                               </tr>
-                            ) : (
-                              filteredSetWords.map((card, index) => (
-                                <tr key={card.id} className="word-row" onClick={() => setSelectedSetWordId(card.id)}>
-                                  <td>{index + 1}</td>
-                                  <td>{card.word || "-"}</td>
-                                  <td>{card.word_type || "-"}</td>
-                                  <td>{card.definition || "-"}</td>
-                                  <td>
-                                    <button
-                                      className="table-inline-button"
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        setSelectedSetWordId(card.id);
-                                      }}
-                                    >
-                                      Xem từ
-                                    </button>
+                            </thead>
+                            <tbody>
+                              {filteredSetWords.length === 0 ? (
+                                <tr>
+                                  <td colSpan="5" className="empty-state">
+                                    Không có từ phù hợp.
                                   </td>
                                 </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  )}
-                </section>
-              ) : null}
-            </section>
+                              ) : (
+                                filteredSetWords.map((card, index) => (
+                                  <tr key={card.id} className="word-row" onClick={() => setSelectedSetWordId(card.id)}>
+                                    <td>{index + 1}</td>
+                                    <td>{card.word || "-"}</td>
+                                    <td>{card.word_type || "-"}</td>
+                                    <td>{card.definition || "-"}</td>
+                                    <td>
+                                      <button
+                                        className="table-inline-button"
+                                        type="button"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          setSelectedSetWordId(card.id);
+                                        }}
+                                      >
+                                        Xem từ
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </section>
+                ) : null}
+              </section>
+            </div>
           ) : null}
         </>
       )}
@@ -764,7 +852,7 @@ function ExamListPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ACTIVE");
-  const [actionMessage, setActionMessage] = useState("");
+  const [currentExamPage, setCurrentExamPage] = useState(1);
 
   const fetchExams = async () => {
     setLoading(true);
@@ -778,12 +866,7 @@ function ExamListPage() {
         params.set("search", keyword);
       }
 
-      if (statusFilter === "ALL") {
-        params.set("includeDeleted", "true");
-      } else if (statusFilter === "DELETED") {
-        params.set("status", "DELETED");
-        params.set("includeDeleted", "true");
-      } else if (statusFilter !== "ACTIVE") {
+      if (statusFilter !== "ACTIVE") {
         params.set("status", statusFilter);
       }
 
@@ -808,11 +891,34 @@ function ExamListPage() {
     fetchExams();
   }, [search, statusFilter]);
 
-  const handleTogglePublish = async (exam) => {
-    const nextStatus = exam.status === "PUBLISHED" ? "HIDDEN" : "PUBLISHED";
+  useEffect(() => {
+    setCurrentExamPage(1);
+  }, [search, statusFilter]);
+
+  const totalExamPages = Math.max(1, Math.ceil(exams.length / TABLE_PAGE_SIZE));
+
+  useEffect(() => {
+    if (currentExamPage > totalExamPages) {
+      setCurrentExamPage(totalExamPages);
+    }
+  }, [currentExamPage, totalExamPages]);
+
+  const paginatedExams = useMemo(() => {
+    const start = (currentExamPage - 1) * TABLE_PAGE_SIZE;
+    return exams.slice(start, start + TABLE_PAGE_SIZE);
+  }, [exams, currentExamPage]);
+
+  const getExamDisplayStatus = (exam) => {
+    if (exam.status === "PUBLISHED") {
+      return "PUBLIC";
+    }
+    return "PRIVATE";
+  };
+
+  const handleInlineExamStatusChange = async (exam, nextDisplayStatus) => {
+    const nextStatus = nextDisplayStatus === "PUBLIC" ? "PUBLISHED" : "HIDDEN";
 
     try {
-      setActionMessage("");
       const response = await fetch(`${EXAM_API_BASE_URL}/${exam.id}/status`, {
         method: "PATCH",
         headers: {
@@ -826,48 +932,26 @@ function ExamListPage() {
         throw new Error(result.message || "Không thể cập nhật trạng thái đề.");
       }
 
-      setActionMessage(result.message || "Cập nhật trạng thái thành công.");
       fetchExams();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Không thể cập nhật trạng thái đề.");
     }
   };
 
-  const handleSoftDelete = async (exam) => {
+  const handleDeleteExam = async (exam) => {
     try {
-      setActionMessage("");
       const response = await fetch(`${EXAM_API_BASE_URL}/${exam.id}`, {
         method: "DELETE",
       });
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Không thể xóa mềm đề thi.");
+        throw new Error(result.message || "Không thể xóa đề.");
       }
 
-      setActionMessage(result.message || "Xóa mềm đề thi thành công.");
       fetchExams();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Không thể xóa mềm đề thi.");
-    }
-  };
-
-  const handleRestore = async (exam) => {
-    try {
-      setActionMessage("");
-      const response = await fetch(`${EXAM_API_BASE_URL}/${exam.id}/restore`, {
-        method: "POST",
-      });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Không thể khôi phục đề thi.");
-      }
-
-      setActionMessage(result.message || "Khôi phục đề thi thành công.");
-      fetchExams();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Không thể khôi phục đề thi.");
+      setError(requestError instanceof Error ? requestError.message : "Không thể xóa đề.");
     }
   };
 
@@ -928,44 +1012,41 @@ function ExamListPage() {
                 </td>
               </tr>
             ) : (
-              exams.map((exam, index) => (
+              paginatedExams.map((exam, index) => (
                 <tr key={exam.id}>
-                  <td>{index + 1}</td>
+                  <td>{(currentExamPage - 1) * TABLE_PAGE_SIZE + index + 1}</td>
                   <td>{exam.title}</td>
                   <td>{exam.year ?? "-"}</td>
-                  <td>{normalizeStatusLabel(exam.status)}</td>
+                  <td>
+                    <select
+                      className="exam-filter inline-status-filter"
+                      value={getExamDisplayStatus(exam)}
+                      onChange={(event) => {
+                        handleInlineExamStatusChange(exam, event.target.value).catch((requestError) => {
+                          setError(
+                            requestError instanceof Error
+                              ? requestError.message
+                              : "Không thể cập nhật trạng thái đề.",
+                          );
+                        });
+                      }}
+                    >
+                      <option value="PRIVATE">Private</option>
+                      <option value="PUBLIC">Public</option>
+                    </select>
+                  </td>
                   <td>
                     <div className="table-action-group">
                       <Link className="table-action-link" to={`/admin/exams/${exam.id}`}>
                         Xem đề
                       </Link>
-
-                      {exam.status === "DELETED" ? (
-                        <button
-                          className="table-inline-button"
-                          type="button"
-                          onClick={() => handleRestore(exam)}
-                        >
-                          Khôi phục
-                        </button>
-                      ) : (
-                        <>
-                          <button
-                            className="table-inline-button"
-                            type="button"
-                            onClick={() => handleTogglePublish(exam)}
-                          >
-                            {exam.status === "PUBLISHED" ? "Tạm ẩn" : "Công khai"}
-                          </button>
-                          <button
-                            className="table-inline-button danger"
-                            type="button"
-                            onClick={() => handleSoftDelete(exam)}
-                          >
-                            Xóa mềm
-                          </button>
-                        </>
-                      )}
+                      <button
+                        className="table-inline-button danger"
+                        type="button"
+                        onClick={() => handleDeleteExam(exam)}
+                      >
+                        Xóa
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -974,7 +1055,13 @@ function ExamListPage() {
           </tbody>
         </table>
       </div>
-      {actionMessage ? <p className="import-status success">{actionMessage}</p> : null}
+      {exams.length > 0 ? (
+        <PaginationControls
+          currentPage={currentExamPage}
+          totalPages={totalExamPages}
+          onPageChange={setCurrentExamPage}
+        />
+      ) : null}
     </section>
   );
 }
@@ -1700,7 +1787,6 @@ function ExamDetailPage() {
                 <button className="import-button import-button-primary" type="button" onClick={handleSaveQuestion} disabled={saving}>
                   {saving ? "Đang lưu..." : "Lưu chỉnh sửa"}
                 </button>
-                {saveMessage ? <p className="import-status info">{saveMessage}</p> : null}
               </div>
             </div>
           ) : (
@@ -1806,7 +1892,6 @@ function ExamDetailPage() {
               >
                 {creatingQuestion ? "Đang thêm..." : "Thêm câu"}
               </button>
-              {createMessage ? <p className="import-status info">{createMessage}</p> : null}
             </div>
           ) : null}
         </section>
@@ -1819,11 +1904,11 @@ function VocabManagementPage() {
   const [sets, setSets] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [currentSetPage, setCurrentSetPage] = useState(1);
   const [mode, setMode] = useState(null);
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [coverImage, setCoverImage] = useState("");
   const [cardDraft, setCardDraft] = useState({
     word: "",
     definition: "",
@@ -1831,7 +1916,6 @@ function VocabManagementPage() {
     pronunciation: "",
     example: "",
     image_url: "",
-    audio_url: "",
   });
   const [cards, setCards] = useState([]);
   const [importTitle, setImportTitle] = useState("");
@@ -1839,11 +1923,11 @@ function VocabManagementPage() {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [selectedSetId, setSelectedSetId] = useState(null);
+  const [detailReadOnly, setDetailReadOnly] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailDraft, setDetailDraft] = useState({
     title: "",
     description: "",
-    coverImageUrl: "",
   });
   const [detailCards, setDetailCards] = useState([]);
   const [detailSearch, setDetailSearch] = useState("");
@@ -1860,18 +1944,20 @@ function VocabManagementPage() {
       params.set("search", keyword);
     }
 
-    if (statusFilter === "ALL") {
-      params.set("includeDeleted", "true");
-    } else if (statusFilter === "DELETED") {
-      params.set("status", "DELETED");
-      params.set("includeDeleted", "true");
-    } else {
-      params.set("status", statusFilter);
-    }
-
     try {
       const result = await apiFetchJson(`${VOCAB_API_BASE_URL}?${params.toString()}`);
-      setSets(result.data || []);
+      const normalized = (result.data || []).filter((item) => !item.deleted_at);
+
+      let filtered = normalized;
+      if (statusFilter === "PRIVATE") {
+        filtered = normalized.filter((item) => item.status === "DRAFT" || item.status === "HIDDEN");
+      } else if (statusFilter === "PUBLIC") {
+        filtered = normalized.filter((item) => item.status === "PUBLISHED");
+      } else if (statusFilter === "WARNING") {
+        filtered = normalized.filter((item) => !!item.warnedAt);
+      }
+
+      setSets(filtered);
     } finally {
       setLoading(false);
     }
@@ -1882,6 +1968,23 @@ function VocabManagementPage() {
       setMessage(requestError instanceof Error ? requestError.message : "Không thể tải bộ từ vựng.");
     });
   }, [search, statusFilter]);
+
+  useEffect(() => {
+    setCurrentSetPage(1);
+  }, [search, statusFilter]);
+
+  const totalSetPages = Math.max(1, Math.ceil(sets.length / TABLE_PAGE_SIZE));
+
+  useEffect(() => {
+    if (currentSetPage > totalSetPages) {
+      setCurrentSetPage(totalSetPages);
+    }
+  }, [currentSetPage, totalSetPages]);
+
+  const paginatedSets = useMemo(() => {
+    const start = (currentSetPage - 1) * TABLE_PAGE_SIZE;
+    return sets.slice(start, start + TABLE_PAGE_SIZE);
+  }, [sets, currentSetPage]);
 
   const changeSetStatus = async (setId, nextStatus) => {
     try {
@@ -1899,6 +2002,31 @@ function VocabManagementPage() {
     }
   };
 
+  const getVocabDisplayStatus = (setItem) => {
+    if (setItem.warnedAt) {
+      return "WARNING";
+    }
+
+    if (setItem.status === "PUBLISHED") {
+      return "PUBLIC";
+    }
+
+    return "PRIVATE";
+  };
+
+  const handleInlineStatusChange = async (setItem, nextDisplayStatus) => {
+    if (nextDisplayStatus === "WARNING") {
+      if (setItem.ownerType !== "USER") {
+        setMessage("Trạng thái Cảnh báo chỉ áp dụng cho bộ từ vựng do user đăng.");
+        return;
+      }
+      await handleWarnUserSet(setItem.id);
+      return;
+    }
+
+    await changeSetStatus(setItem.id, nextDisplayStatus === "PUBLIC" ? "PUBLISHED" : "HIDDEN");
+  };
+
   const isOptionalHttpUrl = (value) => !value.trim() || isHttpUrl(value);
 
   const addCard = () => {
@@ -1908,8 +2036,8 @@ function VocabManagementPage() {
       return;
     }
 
-    if (!isOptionalHttpUrl(cardDraft.image_url) || !isOptionalHttpUrl(cardDraft.audio_url)) {
-      setMessage("URL ảnh/audio của flashcard phải là HTTP/HTTPS.");
+    if (!isOptionalHttpUrl(cardDraft.image_url)) {
+      setMessage("URL ảnh của flashcard phải là HTTP/HTTPS.");
       return;
     }
 
@@ -1927,7 +2055,6 @@ function VocabManagementPage() {
       pronunciation: "",
       example: "",
       image_url: "",
-      audio_url: "",
     });
     setMessage("Đã thêm flashcard vào bản nháp.");
   };
@@ -1942,11 +2069,6 @@ function VocabManagementPage() {
       return;
     }
 
-    if (coverImage.trim() && !isHttpUrl(coverImage)) {
-      setMessage("Cover Image phải là URL HTTP/HTTPS.");
-      return;
-    }
-
     try {
       await apiFetchJson(VOCAB_API_BASE_URL, {
         method: "POST",
@@ -1956,7 +2078,6 @@ function VocabManagementPage() {
         body: JSON.stringify({
           title,
           description,
-          coverImageUrl: coverImage,
           cards: cards.map((item) => ({
             word: item.word,
             definition: item.definition,
@@ -1964,16 +2085,15 @@ function VocabManagementPage() {
             pronunciation: item.pronunciation,
             example: item.example,
             image_url: item.image_url,
-            audio_url: item.audio_url,
           })),
         }),
       });
 
       setTitle("");
       setDescription("");
-      setCoverImage("");
       setCards([]);
-      setMessage("Đã lưu bộ từ vựng ở trạng thái Nháp.");
+      setMode(null);
+      setMessage("Đã lưu bộ từ vựng ở trạng thái Private.");
       await fetchSets();
     } catch (requestError) {
       setMessage(requestError instanceof Error ? requestError.message : "Không thể tạo bộ từ vựng.");
@@ -2014,11 +2134,6 @@ function VocabManagementPage() {
   };
 
   const loadSetDetail = async (setItem) => {
-    if (setItem?.ownerType === "USER") {
-      setMessage("Bộ của user không cho chỉnh sửa trong màn này. Bạn chỉ có thể Cảnh báo/Xóa.");
-      return;
-    }
-
     const setId = setItem?.id;
 
     try {
@@ -2027,10 +2142,10 @@ function VocabManagementPage() {
       const detail = result.data;
 
       setSelectedSetId(detail.id);
+      setDetailReadOnly(setItem?.ownerType === "USER");
       setDetailDraft({
         title: detail.title || "",
         description: detail.description || "",
-        coverImageUrl: detail.cover_image_url || "",
       });
       setDetailCards(
         (detail.flashcards || []).map((card) => ({
@@ -2094,11 +2209,6 @@ function VocabManagementPage() {
       return;
     }
 
-    if (detailDraft.coverImageUrl.trim() && !isHttpUrl(detailDraft.coverImageUrl)) {
-      setMessage("Cover image URL không hợp lệ.");
-      return;
-    }
-
     const invalidCard = detailCards.find(
       (card) =>
         (card.image_url && !isHttpUrl(card.image_url)) ||
@@ -2119,7 +2229,6 @@ function VocabManagementPage() {
         body: JSON.stringify({
           title: detailDraft.title,
           description: detailDraft.description,
-          coverImageUrl: detailDraft.coverImageUrl,
           cards: detailCards.map((card) => ({
             word: card.word,
             definition: card.definition,
@@ -2133,6 +2242,7 @@ function VocabManagementPage() {
       });
 
       await fetchSets();
+      setMode(null);
       setMessage("Đã lưu chỉnh sửa bộ từ vựng.");
     } catch (requestError) {
       setMessage(requestError instanceof Error ? requestError.message : "Không thể lưu chỉnh sửa bộ từ vựng.");
@@ -2159,7 +2269,8 @@ function VocabManagementPage() {
         body: formData,
       });
 
-      setMessage("Import thành công, bộ từ vựng đang ở trạng thái Nháp.");
+      setMessage("Import thành công, bộ từ vựng đang ở trạng thái Private.");
+      setMode(null);
       setImportFile(null);
       setImportTitle("");
       setImportDescription("");
@@ -2235,7 +2346,7 @@ function VocabManagementPage() {
               <th>Ngày tạo</th>
               <th>Người đăng</th>
               <th>Trạng thái</th>
-              <th>Hành động</th>
+              <th>Chi tiết</th>
             </tr>
           </thead>
           <tbody>
@@ -2252,67 +2363,41 @@ function VocabManagementPage() {
                 </td>
               </tr>
             ) : (
-              sets.map((item) => (
+              paginatedSets.map((item) => (
                 <tr key={item.id}>
                   <td>{item.title}</td>
                   <td>{item.card_count}</td>
                   <td>{String(item.created_at).slice(0, 10)}</td>
                   <td>{item.ownerName} ({item.ownerType === "USER" ? "User" : "Admin"})</td>
-                  <td>{normalizeStatusLabel(item.status)}</td>
                   <td>
-                    <div className="table-action-group">
-                      {item.status === "DELETED" ? (
-                        <button
-                          className="table-inline-button"
-                          type="button"
-                          onClick={() => handleRestore(item.id)}
-                        >
-                          Khôi phục
-                        </button>
-                      ) : item.ownerType === "USER" ? (
-                        <>
-                          <button
-                            className="table-inline-button"
-                            type="button"
-                            disabled={!!item.warnedAt}
-                            onClick={() => handleWarnUserSet(item.id)}
-                          >
-                            {item.warnedAt ? "Đã cảnh báo" : "Cảnh báo"}
-                          </button>
-                          <button
-                            className="table-inline-button danger"
-                            type="button"
-                            onClick={() => handleSoftDelete(item.id)}
-                          >
-                            Xóa mềm
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="table-inline-button"
-                            type="button"
-                            onClick={() => changeSetStatus(item.id, item.status === "PUBLISHED" ? "HIDDEN" : "PUBLISHED")}
-                          >
-                            {item.status === "PUBLISHED" ? "Tạm ẩn" : "Công khai"}
-                          </button>
-                          <button
-                            className="table-inline-button danger"
-                            type="button"
-                            onClick={() => handleSoftDelete(item.id)}
-                          >
-                            Xóa mềm
-                          </button>
-                          <button
-                            className="table-inline-button"
-                            type="button"
-                            onClick={() => loadSetDetail(item)}
-                          >
-                            Chi tiết / Sửa
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    <select
+                      className="exam-filter inline-status-filter"
+                      value={getVocabDisplayStatus(item)}
+                      onChange={(event) => {
+                        handleInlineStatusChange(item, event.target.value).catch((requestError) => {
+                          setMessage(
+                            requestError instanceof Error
+                              ? requestError.message
+                              : "Không thể cập nhật trạng thái bộ từ vựng.",
+                          );
+                        });
+                      }}
+                    >
+                      <option value="PRIVATE">Private</option>
+                      <option value="PUBLIC">Public</option>
+                      <option value="WARNING" disabled={item.ownerType !== "USER"}>
+                        Cảnh báo
+                      </option>
+                    </select>
+                  </td>
+                  <td>
+                    <button
+                      className="table-inline-button"
+                      type="button"
+                      onClick={() => loadSetDetail(item)}
+                    >
+                      Xem chi tiết
+                    </button>
                   </td>
                 </tr>
               ))
@@ -2321,8 +2406,17 @@ function VocabManagementPage() {
         </table>
       </div>
 
+      {sets.length > 0 ? (
+        <PaginationControls
+          currentPage={currentSetPage}
+          totalPages={totalSetPages}
+          onPageChange={setCurrentSetPage}
+        />
+      ) : null}
+
       {mode ? (
-        <div className="create-panel vocab-panel">
+        <div className="user-modal-overlay" onClick={() => setMode(null)}>
+          <div className="create-panel vocab-panel user-modal vocab-modal-panel" onClick={(event) => event.stopPropagation()}>
           {mode !== "detail" ? (
             <>
               <div className="create-tabs">
@@ -2362,12 +2456,6 @@ function VocabManagementPage() {
               placeholder="Mô tả ngắn"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-            />
-            <input
-              className="import-input"
-              placeholder="Cover Image URL"
-              value={coverImage}
-              onChange={(event) => setCoverImage(event.target.value)}
             />
 
             <p className="detail-label">Thêm flashcard</p>
@@ -2419,21 +2507,13 @@ function VocabManagementPage() {
                 setCardDraft((current) => ({ ...current, image_url: event.target.value }))
               }
             />
-            <input
-              className="import-input"
-              placeholder="URL audio"
-              value={cardDraft.audio_url}
-              onChange={(event) =>
-                setCardDraft((current) => ({ ...current, audio_url: event.target.value }))
-              }
-            />
 
             <div className="import-actions">
               <button className="import-button import-button-secondary" type="button" onClick={addCard}>
                 Thêm thẻ
               </button>
               <button className="import-button import-button-primary" type="button" onClick={saveDraftSet}>
-                Lưu bộ Nháp
+                Lưu bộ Private
               </button>
             </div>
 
@@ -2456,7 +2536,6 @@ function VocabManagementPage() {
             ) : null}
 
               <p className="mock-url">Đã nhập: {cards.length} flashcard</p>
-              <p className="import-status info">{message}</p>
             </div>
           ) : mode === "import" ? (
             <div className="import-form-card">
@@ -2489,9 +2568,8 @@ function VocabManagementPage() {
                 </div>
               </div>
               <button className="import-button import-button-primary" type="button" onClick={handleImportSubmit} disabled={importing}>
-                {importing ? "Đang import..." : "Lưu vào Nháp"}
+                {importing ? "Đang import..." : "Lưu vào Private"}
               </button>
-              <p className="import-status info">{message}</p>
             </div>
           ) : (
             <div className="import-form-card">
@@ -2501,16 +2579,20 @@ function VocabManagementPage() {
                   <button className="table-inline-button" type="button" onClick={() => setMode(null)}>
                     Đóng
                   </button>
-                  <button
-                    className="table-inline-button"
-                    type="button"
-                    onClick={() => setSelectedDetailCardId(null)}
-                  >
-                    Danh sách từ
-                  </button>
-                  <button className="table-inline-button" type="button" onClick={addDetailCard}>
-                    + Thêm thẻ
-                  </button>
+                  {!detailReadOnly ? (
+                    <>
+                      <button
+                        className="table-inline-button"
+                        type="button"
+                        onClick={() => setSelectedDetailCardId(null)}
+                      >
+                        Danh sách từ
+                      </button>
+                      <button className="table-inline-button" type="button" onClick={addDetailCard}>
+                        + Thêm thẻ
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               </div>
 
@@ -2525,60 +2607,64 @@ function VocabManagementPage() {
                         className="import-input"
                         placeholder="Word"
                         value={selectedDetailCard.word}
+                        disabled={detailReadOnly}
                         onChange={(event) => updateDetailCard(selectedDetailCard.id, "word", event.target.value)}
                       />
                       <input
                         className="import-input"
                         placeholder="Definition"
                         value={selectedDetailCard.definition}
+                        disabled={detailReadOnly}
                         onChange={(event) => updateDetailCard(selectedDetailCard.id, "definition", event.target.value)}
                       />
                       <input
                         className="import-input"
                         placeholder="Word type"
                         value={selectedDetailCard.word_type}
+                        disabled={detailReadOnly}
                         onChange={(event) => updateDetailCard(selectedDetailCard.id, "word_type", event.target.value)}
                       />
                       <input
                         className="import-input"
                         placeholder="Pronunciation"
                         value={selectedDetailCard.pronunciation}
+                        disabled={detailReadOnly}
                         onChange={(event) => updateDetailCard(selectedDetailCard.id, "pronunciation", event.target.value)}
                       />
                       <textarea
                         className="import-input import-textarea"
                         placeholder="Example"
                         value={selectedDetailCard.example}
+                        disabled={detailReadOnly}
                         onChange={(event) => updateDetailCard(selectedDetailCard.id, "example", event.target.value)}
                       />
                       <input
                         className="import-input"
                         placeholder="Image URL"
                         value={selectedDetailCard.image_url}
+                        disabled={detailReadOnly}
                         onChange={(event) => updateDetailCard(selectedDetailCard.id, "image_url", event.target.value)}
-                      />
-                      <input
-                        className="import-input"
-                        placeholder="Audio URL"
-                        value={selectedDetailCard.audio_url}
-                        onChange={(event) => updateDetailCard(selectedDetailCard.id, "audio_url", event.target.value)}
                       />
 
                       <div className="table-action-group card-detail-actions">
-                        <button className="table-inline-button" type="button" onClick={() => setSelectedDetailCardId(null)}>
-                          Quay lại danh sách từ
-                        </button>
-                        <button className="table-inline-button danger" type="button" onClick={() => removeDetailCard(selectedDetailCard.id)}>
-                          Xóa thẻ
-                        </button>
-                        <button
-                          className="import-button import-button-primary"
-                          type="button"
-                          onClick={saveDetailSet}
-                          disabled={savingDetail}
-                        >
-                          {savingDetail ? "Đang lưu..." : "Lưu chỉnh sửa bộ từ vựng"}
-                        </button>
+                        {!detailReadOnly ? (
+                          <>
+                            <button className="table-inline-button" type="button" onClick={() => setSelectedDetailCardId(null)}>
+                              Quay lại danh sách từ
+                            </button>
+                            <button className="table-inline-button danger" type="button" onClick={() => removeDetailCard(selectedDetailCard.id)}>
+                              Xóa thẻ
+                            </button>
+                            <button
+                              className="import-button import-button-primary"
+                              type="button"
+                              onClick={saveDetailSet}
+                              disabled={savingDetail}
+                            >
+                              {savingDetail ? "Đang lưu..." : "Lưu chỉnh sửa bộ từ vựng"}
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </div>
                   ) : (
@@ -2587,6 +2673,7 @@ function VocabManagementPage() {
                         className="import-input"
                         placeholder="Tiêu đề bộ từ vựng"
                         value={detailDraft.title}
+                        disabled={detailReadOnly}
                         onChange={(event) =>
                           setDetailDraft((current) => ({ ...current, title: event.target.value }))
                         }
@@ -2595,19 +2682,11 @@ function VocabManagementPage() {
                         className="import-input"
                         placeholder="Mô tả"
                         value={detailDraft.description}
+                        disabled={detailReadOnly}
                         onChange={(event) =>
                           setDetailDraft((current) => ({ ...current, description: event.target.value }))
                         }
                       />
-                      <input
-                        className="import-input"
-                        placeholder="Cover Image URL"
-                        value={detailDraft.coverImageUrl}
-                        onChange={(event) =>
-                          setDetailDraft((current) => ({ ...current, coverImageUrl: event.target.value }))
-                        }
-                      />
-
                       <input
                         className="exam-search"
                         placeholder="Tìm từ trong bộ flashcard"
@@ -2659,14 +2738,16 @@ function VocabManagementPage() {
                         </table>
                       </div>
 
-                      <button
-                        className="import-button import-button-primary"
-                        type="button"
-                        onClick={saveDetailSet}
-                        disabled={savingDetail}
-                      >
-                        {savingDetail ? "Đang lưu..." : "Lưu chỉnh sửa bộ từ vựng"}
-                      </button>
+                      {!detailReadOnly ? (
+                        <button
+                          className="import-button import-button-primary"
+                          type="button"
+                          onClick={saveDetailSet}
+                          disabled={savingDetail}
+                        >
+                          {savingDetail ? "Đang lưu..." : "Lưu chỉnh sửa bộ từ vựng"}
+                        </button>
+                      ) : null}
                     </>
                   )}
                 </>
@@ -2676,9 +2757,9 @@ function VocabManagementPage() {
                 <p className="empty-state">Hãy chọn một bộ từ vựng trong bảng để xem và chỉnh sửa.</p>
               ) : null}
 
-              <p className="import-status info">{message}</p>
             </div>
           )}
+          </div>
         </div>
       ) : null}
     </section>
@@ -2746,9 +2827,56 @@ function StatCard({ label, value }) {
   );
 }
 
+function PaginationControls({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) {
+    return null;
+  }
+
+  const pages = Array.from({ length: totalPages }, (_, index) => index + 1);
+
+  return (
+    <div className="pagination-wrap">
+      <button
+        className="table-inline-button"
+        type="button"
+        disabled={currentPage === 1}
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+      >
+        Trước
+      </button>
+
+      <div className="pagination-pages">
+        {pages.map((page) => (
+          <button
+            className={`table-inline-button ${page === currentPage ? "pagination-active" : ""}`}
+            type="button"
+            key={page}
+            onClick={() => onPageChange(page)}
+          >
+            {page}
+          </button>
+        ))}
+      </div>
+
+      <button
+        className="table-inline-button"
+        type="button"
+        disabled={currentPage === totalPages}
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+      >
+        Sau
+      </button>
+    </div>
+  );
+}
+
 function getPageTitle(pathname) {
   if (pathname === "/admin/dashboard") {
-    return "Admin - Dashboard & Người dùng";
+    return "Admin - Dashboard";
+  }
+
+  if (pathname === "/admin/users") {
+    return "Admin - Quản lý người dùng";
   }
 
   if (pathname === "/admin/exams/import-excel") {

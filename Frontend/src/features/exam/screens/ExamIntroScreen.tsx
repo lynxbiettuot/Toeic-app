@@ -12,10 +12,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
 
-const MOCK_USER_ID = 1;
-
 export function ExamIntroScreen({ navigation, route }: any) {
-  const { examId, completed: initCompleted, sessionId: initSessionId } = route.params;
+  const { examId, completed: initCompleted, sessionId: initSessionId, userId = 1 } = route.params;
   const [exam, setExam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -38,7 +36,7 @@ export function ExamIntroScreen({ navigation, route }: any) {
       const res = await fetch(`${API_BASE_URL}/exams/${examId}/sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: MOCK_USER_ID }),
+        body: JSON.stringify({ userId }),
       });
       const data = await res.json();
 

@@ -11,8 +11,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
 import { API_BASE_URL } from "../../../config/api";
 
-const MOCK_USER_ID = 1;
-
 type Exam = {
   id: number;
   title: string;
@@ -27,17 +25,20 @@ type Exam = {
 export function ExamListScreen({
   navigation,
   onBack,
+  route,
 }: {
   navigation?: any;
   onBack: () => void;
+  route?: any;
 }) {
+  const userId = route?.params?.userId ?? 1;
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
   const fetchExams = () => {
     setLoading(true);
-    fetch(`${API_BASE_URL}/exams?userId=${MOCK_USER_ID}`)
+    fetch(`${API_BASE_URL}/exams?userId=${userId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.data && Array.isArray(data.data)) {
