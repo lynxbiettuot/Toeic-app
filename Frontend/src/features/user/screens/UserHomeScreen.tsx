@@ -1,12 +1,12 @@
 import React from "react";
 import { Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Feather,
   FontAwesome5,
@@ -15,6 +15,7 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
+import { BottomNavbar, NavScreen } from "../../../shared/components/BottomNavbar";
 
 type UserHomeScreenProps = {
   displayName?: string;
@@ -22,6 +23,8 @@ type UserHomeScreenProps = {
   onOpenVocabularyReview?: () => void;
   onNavigateToExam?: () => void;
   onOpenWrongHistory?: () => void;
+  onLogout?: () => void;
+  onNavigate?: (screen: NavScreen) => void;
 };
 
 type QuickAction = {
@@ -74,11 +77,13 @@ const topActions: QuickAction[] = [
 ];
 
 export function UserHomeScreen({
-  displayName = 'Linh',
+  displayName = '',
   onOpenFlashcard,
   onOpenVocabularyReview,
   onNavigateToExam,
   onOpenWrongHistory,
+  onLogout,
+  onNavigate,
 }: UserHomeScreenProps) {
   const actions = topActions.map((action) =>
     action.label === 'Flashcard'
@@ -95,7 +100,7 @@ export function UserHomeScreen({
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
         <View style={styles.topBar}>
           <Ionicons name="menu" size={28} color="#111111" />
@@ -136,23 +141,11 @@ export function UserHomeScreen({
           <MaterialIcons name="chat" size={26} color="#ffffff" />
         </View>
 
-        <View style={styles.bottomNav}>
-          <Pressable style={styles.navButton} onPress={() => undefined}>
-            <Ionicons name="home" size={28} color="#111111" />
-          </Pressable>
-          <View style={styles.navButton}>
-            <Ionicons name="reader-outline" size={26} color="#111111" />
-          </View>
-          <Pressable style={styles.navButton} onPress={onOpenVocabularyReview}>
-            <Feather name="clock" size={26} color="#111111" />
-          </Pressable>
-          <View style={styles.navButton}>
-            <FontAwesome5 name="gem" size={22} color="#111111" />
-          </View>
-          <View style={styles.navButton}>
-            <Ionicons name="settings-outline" size={28} color="#111111" />
-          </View>
-        </View>
+        <BottomNavbar 
+          activeScreen="home" 
+          onNavigate={onNavigate || (() => {})} 
+          onLogout={onLogout || (() => {})} 
+        />
       </View>
     </SafeAreaView>
   );
@@ -161,7 +154,7 @@ export function UserHomeScreen({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f5f7f7",
+    backgroundColor: AUTH_ACTION_COLOR,
   },
   container: {
     flex: 1,

@@ -11,8 +11,9 @@ export const getPublicFlashcardSets = async (req: Request, res: Response) => {
   try {
     const { page, limit } = validatePagination(req.query.page, req.query.limit);
     const search = validateSearchQuery(req.query.search);
+    const userId = parseUserId(req.query.userId) ?? undefined;
 
-    const result = await PublicLibraryService.getPublicFlashcardSets(page, limit, search);
+    const result = await PublicLibraryService.getPublicFlashcardSets(page, limit, search, userId);
 
     return res.json({
       statusCode: 200,
@@ -56,10 +57,10 @@ export const getPublicFlashcardSetDetail = async (req: Request, res: Response) =
 export const importFlashcardSet = async (req: Request, res: Response) => {
   try {
     const sourceSetId = parseSetId(req.params.setId);
-    const userId = parseUserId(req.query.userId);
+    const userId = req.auth?.userId ?? null;
 
     if (!sourceSetId || !userId) {
-      return res.status(400).json({ message: 'Missing required fields', statusCode: 400 });
+      return res.status(401).json({ message: 'Unauthorized', statusCode: 401 });
     }
 
     const result = await PublicLibraryService.importFlashcardSet(sourceSetId, userId);

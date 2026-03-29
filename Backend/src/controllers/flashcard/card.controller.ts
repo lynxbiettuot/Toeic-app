@@ -19,7 +19,7 @@ import * as FlashcardCardService from '../../services/flashcard/flashcard-card.s
 
 export const getFlashcardsBySet = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.query.userId);
+    const userId = req.auth?.userId ?? null;
     const setId = parseSetId(req.params.setId);
 
     if (!userId || !setId) {
@@ -46,7 +46,7 @@ export const getFlashcardsBySet = async (req: Request, res: Response) => {
 
 export const createFlashcard = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.body.userId);
+    const userId = req.auth?.userId ?? null;
     const setId = parseSetId(req.params.setId);
     const word = validateWord(req.body.word);
     const definition = validateDefinition(req.body.definition);
@@ -88,7 +88,7 @@ export const createFlashcard = async (req: Request, res: Response) => {
 
 export const updateFlashcard = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.body.userId);
+    const userId = req.auth?.userId ?? null;
     const cardId = parseCardId(req.params.cardId);
     const word = validateWord(req.body.word);
     const definition = validateDefinition(req.body.definition);
@@ -134,7 +134,7 @@ export const updateFlashcard = async (req: Request, res: Response) => {
 
 export const deleteFlashcard = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.query.userId);
+    const userId = req.auth?.userId ?? null;
     const cardId = parseCardId(req.params.cardId);
 
     if (!userId || !cardId) {

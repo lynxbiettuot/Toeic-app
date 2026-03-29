@@ -3,6 +3,7 @@
  */
 
 import { API_BASE_URL } from '../../../config/api';
+import { authFetch } from '../../../shared/api/authFetch';
 
 export type ApiResponse<T> = {
   statusCode?: number;
@@ -29,3 +30,6 @@ export const parseJson = async <T>(response: Response): Promise<T> => {
 
   return json.data;
 };
+
+export { authFetch };
+

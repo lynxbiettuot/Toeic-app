@@ -4,7 +4,7 @@
  */
 
 import type { Flashcard, FlashcardSet } from '../types';
-import { buildUrl, parseJson } from './api-client';
+import { authFetch, buildUrl, parseJson } from './api-client';
 
 export interface GetFlashcardsBySetResponse {
   set: FlashcardSet;
@@ -15,7 +15,7 @@ export const getFlashcardsBySet = async (
   setId: number,
   userId: number
 ): Promise<GetFlashcardsBySetResponse> => {
-  const response = await fetch(buildUrl(`/flashcards/sets/${setId}/cards?userId=${userId}`));
+  const response = await authFetch(buildUrl(`/flashcards/sets/${setId}/cards?userId=${userId}`));
   const json = (await response.json()) as { data?: GetFlashcardsBySetResponse; message?: string };
 
   if (!response.ok) {
@@ -41,7 +41,7 @@ export const createFlashcard = async (
     imageUrl: string;
   }
 ): Promise<Flashcard> => {
-  const response = await fetch(buildUrl(`/flashcards/sets/${setId}/cards`), {
+  const response = await authFetch(buildUrl(`/flashcards/sets/${setId}/cards`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, ...payload })
@@ -62,7 +62,7 @@ export const updateFlashcard = async (
     imageUrl: string;
   }
 ): Promise<Flashcard> => {
-  const response = await fetch(buildUrl(`/flashcards/cards/${cardId}`), {
+  const response = await authFetch(buildUrl(`/flashcards/cards/${cardId}`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, ...payload })
@@ -72,7 +72,7 @@ export const updateFlashcard = async (
 };
 
 export const deleteFlashcard = async (cardId: number, userId: number): Promise<void> => {
-  const response = await fetch(buildUrl(`/flashcards/cards/${cardId}?userId=${userId}`), {
+  const response = await authFetch(buildUrl(`/flashcards/cards/${cardId}?userId=${userId}`), {
     method: 'DELETE'
   });
 
@@ -81,3 +81,4 @@ export const deleteFlashcard = async (cardId: number, userId: number): Promise<v
     throw new Error(json.message || 'Delete failed');
   }
 };
+

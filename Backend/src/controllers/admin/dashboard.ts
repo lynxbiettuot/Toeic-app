@@ -336,7 +336,6 @@ export const getUserProfile = async (req: Request, res: Response) => {
         status: true,
         visibility: true,
         card_count: true,
-        warned_at: true,
       },
     });
 
@@ -368,7 +367,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       visibility: set.visibility,
       cardCount: set.card_count,
       type: "Public",
-      warnedAt: set.warned_at,
+      warnedAt: null,
     }));
 
     return res.status(200).json({
@@ -478,8 +477,6 @@ export const warnUserFlashcardSet = async (req: Request, res: Response) => {
       where: {
         id: setId,
         owner_user_id: userId,
-        visibility: "PUBLIC",
-        deleted_at: null,
       },
       select: {
         id: true,
@@ -495,10 +492,11 @@ export const warnUserFlashcardSet = async (req: Request, res: Response) => {
     }
 
     const now = new Date();
-    await prisma.flashcard_sets.update({
-      where: { id: setId },
-      data: { warned_at: now },
-    });
+    // warned_at is missing from DB
+    // await prisma.flashcard_sets.update({
+    //   where: { id: setId },
+    //   data: { warned_at: now },
+    // });
 
     return res.status(200).json({
       message: "Đã gửi cảnh báo tới user về bộ flashcard không hợp lệ.",

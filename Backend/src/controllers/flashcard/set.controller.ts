@@ -15,10 +15,10 @@ import * as FlashcardSetService from '../../services/flashcard/flashcard-set.ser
 
 export const getUserFlashcardSets = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.query.userId);
+    const userId = req.auth?.userId ?? null;
 
     if (!userId) {
-      return res.status(400).json({ message: 'Invalid userId', statusCode: 400 });
+      return res.status(401).json({ message: 'Unauthorized', statusCode: 401 });
     }
 
     const sets = await FlashcardSetService.getUserFlashcardSets(userId);
@@ -31,7 +31,7 @@ export const getUserFlashcardSets = async (req: Request, res: Response) => {
 
 export const createFlashcardSet = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.body.userId);
+    const userId = req.auth?.userId ?? null;
     const title = validateTitle(req.body.title);
     const description = validateDescription(req.body.description);
     const visibility = normalizeVisibility(req.body.visibility);
@@ -55,7 +55,7 @@ export const createFlashcardSet = async (req: Request, res: Response) => {
 
 export const updateFlashcardSet = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.body.userId);
+    const userId = req.auth?.userId ?? null;
     const setId = parseSetId(req.params.setId);
     const title = validateTitle(req.body.title);
     const description = validateDescription(req.body.description);
@@ -89,7 +89,7 @@ export const updateFlashcardSet = async (req: Request, res: Response) => {
 
 export const deleteFlashcardSet = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.query.userId);
+    const userId = req.auth?.userId ?? null;
     const setId = parseSetId(req.params.setId);
 
     if (!userId || !setId) {

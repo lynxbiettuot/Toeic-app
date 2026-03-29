@@ -5,6 +5,7 @@ import Slider from "@react-native-community/slider";
 import { Audio } from "expo-av";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
+import { authFetch } from "../../../shared/api/authFetch";
 
 export function ExamQuestionDetailScreen({ navigation, route }: any) {
   const { examId, sessionId, questionId, partNumber } = route.params;
@@ -30,7 +31,7 @@ export function ExamQuestionDetailScreen({ navigation, route }: any) {
       return;
     }
 
-    fetch(`${API_BASE_URL}/exams/${examId}/sessions/${sessionId}/questions/${questionId}`)
+    authFetch(`${API_BASE_URL}/exams/${examId}/sessions/${sessionId}/questions/${questionId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.statusCode === 200) {

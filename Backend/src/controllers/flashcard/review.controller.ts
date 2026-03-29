@@ -9,10 +9,10 @@ import * as SpacedRepetitionService from '../../services/flashcard/spaced-repeti
 
 export const getDueReviewCards = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.query.userId);
+    const userId = req.auth?.userId ?? null;
 
     if (!userId) {
-      return res.status(400).json({ message: 'Invalid userId', statusCode: 400 });
+      return res.status(401).json({ message: 'Unauthorized', statusCode: 401 });
     }
 
     const result = await SpacedRepetitionService.getDueReviewCards(userId);
@@ -29,7 +29,7 @@ export const getDueReviewCards = async (req: Request, res: Response) => {
 
 export const rateReviewCard = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.body.userId);
+    const userId = req.auth?.userId ?? null;
     const cardId = parseCardId(req.params.cardId);
     const rating = normalizeRating(req.body.rating);
 
@@ -61,10 +61,10 @@ export const rateReviewCard = async (req: Request, res: Response) => {
 
 export const getTodayReviewStats = async (req: Request, res: Response) => {
   try {
-    const userId = parseUserId(req.query.userId);
+    const userId = req.auth?.userId ?? null;
 
     if (!userId) {
-      return res.status(400).json({ message: 'Invalid userId', statusCode: 400 });
+      return res.status(401).json({ message: 'Unauthorized', statusCode: 401 });
     }
 
     const result = await SpacedRepetitionService.getTodayReviewStats(userId);

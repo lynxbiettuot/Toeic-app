@@ -52,6 +52,7 @@ async function sendOtpNotification(userEmail: string, otp: string) {
 export const signup = async (req: Request, res: Response) => {
   try {
     const { email, password, confirmPassword, name } = req.body;
+    console.log(req.body)
 
     // Validate input
     if (!email || !password || !confirmPassword || !name) {
@@ -724,6 +725,109 @@ export const handleVerifyOtpAndResetPasswordAdmin = async (
 
     return res.status(200).json({
       message: "Password has been successfully changed!",
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal server error!",
+      statusCode: 500,
+    });
+  }
+};
+// ==========================================
+// XÁC THỰC OTP CHỈ ĐỂ KIỂM TRA (USER)
+// ==========================================
+export const handleVerifyOtpOnlyUser = async (req: Request, res: Response) => {
+  try {
+    const { email, otpVerify } = req.body;
+
+    if (!email || !otpVerify) {
+      return res.status(400).json({
+        message: "Email and OTP are required",
+        statusCode: 400,
+      });
+    }
+
+    const currentUser = await prisma.users.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({
+        message: "Account does not exist!",
+        statusCode: 404,
+      });
+    }
+
+    if (!currentUser.otp_expiry || new Date() > currentUser.otp_expiry) {
+      return res.status(401).json({
+        message: "OTP is expired!",
+        statusCode: 401,
+      });
+    }
+
+    if (currentUser.reset_otp !== otpVerify) {
+      return res.status(401).json({
+        message: "OTP is not valid!",
+        statusCode: 401,
+      });
+    }
+
+    return res.status(200).json({
+      message: "OTP is valid. You can reset your password now.",
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal server error!",
+      statusCode: 500,
+    });
+  }
+};
+
+// ==========================================
+// XÁC THỰC OTP CHỈ ĐỂ KIỂM TRA (ADMIN)
+// ==========================================
+export const handleVerifyOtpOnlyAdmin = async (req: Request, res: Response) => {
+  try {
+    const { email, otpVerify } = req.body;
+
+    if (!email || !otpVerify) {
+      return res.status(400).json({
+        message: "Email and OTP are required",
+        statusCode: 400,
+      });
+    }
+
+    const currentAdmin = await prisma.admins.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+
+    if (!currentAdmin) {
+      return res.status(404).json({
+        message: "Admin account does not exist!",
+        statusCode: 404,
+      });
+    }
+
+    if (!currentAdmin.otp_expiry || new Date() > currentAdmin.otp_expiry) {
+      return res.status(401).json({
+        message: "OTP is expired!",
+        statusCode: 401,
+      });
+    }
+
+    if (currentAdmin.reset_otp !== otpVerify) {
+      return res.status(401).json({
+        message: "OTP is not valid!",
+        statusCode: 401,
+      });
+    }
+
+    return res.status(200).json({
+      message: "OTP is valid. You can reset your password now.",
       statusCode: 200,
     });
   } catch (error) {

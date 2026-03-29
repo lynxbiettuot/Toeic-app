@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
+import { authFetch } from "../../../shared/api/authFetch";
 
 type WrongQuestion = {
   question_id: number;
@@ -21,7 +22,7 @@ type WrongQuestion = {
 };
 
 export function WrongAnswerListScreen({ navigation, route }: any) {
-  const { examId, examTitle, sessionId, wrongQuestions = [], userId = 1 } = route.params;
+  const { examId, examTitle, sessionId, wrongQuestions = [], userId } = route.params;
   const [retaking, setRetaking] = useState(false);
 
   const handleRetakeWrong = async () => {
@@ -35,12 +36,12 @@ export function WrongAnswerListScreen({ navigation, route }: any) {
           onPress: async () => {
             setRetaking(true);
             try {
-              const res = await fetch(
+              const res = await authFetch(
                 `${API_BASE_URL}/exams/${examId}/sessions`,
                 {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ userId }),
+                  body: JSON.stringify({}),
                 }
               );
               const data = await res.json();

@@ -15,8 +15,7 @@ export const countDueCards = async (userId: number, now: Date): Promise<number> 
   return prisma.flashcards.count({
     where: {
       set: {
-        owner_user_id: userId,
-        deleted_at: null
+        user: { id: userId }
       },
       OR: [
         {

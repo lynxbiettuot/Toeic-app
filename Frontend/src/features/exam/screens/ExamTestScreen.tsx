@@ -15,9 +15,10 @@ import { Audio } from "expo-av";
 import Slider from "@react-native-community/slider";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
+import { authFetch } from "../../../shared/api/authFetch";
 
 export function ExamTestScreen({ navigation, route }: any) {
-  const { examId, sessionId, duration, questionFilter, userId = 1 } = route.params;
+  const { examId, sessionId, duration, questionFilter, userId } = route.params;
   const isPracticeMode = !!(questionFilter && Array.isArray(questionFilter) && questionFilter.length > 0);
   const [questions, setQuestions] = useState<any[]>([]);
   const [pages, setPages] = useState<any[][]>([]);
@@ -239,12 +240,12 @@ export function ExamTestScreen({ navigation, route }: any) {
     }));
 
     try {
-      const res = await fetch(`${API_BASE_URL}/exams/${examId}/sessions/${sessionId}/submit`, {
+      const res = await authFetch(`${API_BASE_URL}/exams/${examId}/sessions/${sessionId}/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ answers: payload, isPractice: isPracticeMode, userId })
+        body: JSON.stringify({ answers: payload, isPractice: isPracticeMode })
       });
       const data = await res.json();
       

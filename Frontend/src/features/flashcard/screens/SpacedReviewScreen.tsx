@@ -3,20 +3,22 @@ import {
   ActivityIndicator,
   Image,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
 import { getDueReviewCards, getTodayReviewStats, rateReviewCard, getAllUserFlashcards } from '../services';
-import { FlashcardFooterNav } from '../components/FlashcardFooterNav';
+import { BottomNavbar, NavScreen } from '../../../shared/components/BottomNavbar';
 import type { ReviewFlashcard, ReviewRating } from '../types';
 
 type SpacedReviewScreenProps = {
   userId: number;
   onBackHome: () => void;
+  onNavigate: (screen: NavScreen) => void;
+  onLogout: () => void;
 };
 
 type PracticeMode = 'review' | 'extra';
@@ -28,7 +30,7 @@ const RATING_BUTTONS: Array<{ rating: ReviewRating; label: string; color: string
   { rating: 'EASY', label: 'Dễ', color: AUTH_ACTION_COLOR }
 ];
 
-export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenProps) {
+export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }: SpacedReviewScreenProps) {
   const [allCards, setAllCards] = useState<ReviewFlashcard[]>([]);
   const [cards, setCards] = useState<ReviewFlashcard[]>([]);
   const [mode, setMode] = useState<PracticeMode>('review');
@@ -149,7 +151,7 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={AUTH_ACTION_COLOR} />
         </View>
@@ -157,9 +159,9 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
     );
   }
 
-  if (!activeCard) {
+  if (dueCount === 0 || mode === 'extra') {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.topBar}>
           <Pressable onPress={onBackHome} style={styles.iconButton}>
             <Ionicons name="arrow-back" size={22} color="#111" />
@@ -183,13 +185,17 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
           </Pressable>
         </View>
 
-        <FlashcardFooterNav onGoHome={onBackHome} />
+        <BottomNavbar 
+          activeScreen="spaced-review" 
+          onNavigate={onNavigate} 
+          onLogout={onLogout} 
+        />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.topBar}>
         <Pressable onPress={onBackHome} style={styles.iconButton}>
           <Ionicons name="arrow-back" size={22} color="#111" />
@@ -252,14 +258,18 @@ export function SpacedReviewScreen({ userId, onBackHome }: SpacedReviewScreenPro
         )}
       </View>
 
-      <FlashcardFooterNav onGoHome={onBackHome} />
+      <BottomNavbar 
+        activeScreen="spaced-review" 
+        onNavigate={onNavigate} 
+        onLogout={onLogout} 
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f5f7f7' },
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  safeArea: { flex: 1, backgroundColor: AUTH_ACTION_COLOR },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff' },
   topBar: {
     height: 56,
     backgroundColor: AUTH_ACTION_COLOR,
@@ -275,7 +285,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center'
   },
-  container: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
+  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 16 },
   progressText: { fontSize: 13, color: '#555', marginBottom: 10 },
   errorText: { color: '#b42318', marginBottom: 10, fontSize: 13 },
   cardBox: {
@@ -332,6 +342,7 @@ const styles = StyleSheet.create({
   ratingBtnText: { color: '#fff', fontWeight: '700' },
   completeWrap: {
     flex: 1,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24

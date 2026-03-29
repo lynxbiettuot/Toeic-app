@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
+import { authFetch } from "../../../shared/api/authFetch";
+import { BottomNavbar, NavScreen } from "../../../shared/components/BottomNavbar";
 
 type WrongExamGroup = {
   exam_id: number;
@@ -31,10 +34,14 @@ export function WrongAnswerHistoryScreen({
   navigation,
   onBack,
   route,
+  onNavigate,
+  onLogout,
 }: {
   navigation?: any;
   onBack?: () => void;
   route?: any;
+  onNavigate: (screen: NavScreen) => void;
+  onLogout: () => void;
 }) {
   const userId = route?.params?.userId ?? 1;
   const [groups, setGroups] = useState<WrongExamGroup[]>([]);
@@ -42,7 +49,7 @@ export function WrongAnswerHistoryScreen({
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/exams/wrong-answers?userId=${userId}`)
+    authFetch(`${API_BASE_URL}/exams/wrong-answers`)
       .then((res) => res.json())
       .then((data) => {
         if (data.statusCode === 200 && Array.isArray(data.data)) {
@@ -85,15 +92,16 @@ export function WrongAnswerHistoryScreen({
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack() ?? onBack?.()}>
-          <Ionicons name="arrow-back" size={24} color="#111" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lịch sử sai sót</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation?.goBack() ?? onBack?.()}>
+            <Ionicons name="arrow-back" size={24} color="#111" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Lịch sử sai sót</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
       {/* Thanh chọn năm */}
       {availableYears.length > 0 && (
@@ -166,24 +174,30 @@ export function WrongAnswerHistoryScreen({
           )}
         />
       )}
-    </View>
+      <BottomNavbar 
+        activeScreen="home" 
+        onNavigate={onNavigate} 
+        onLogout={onLogout} 
+      />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7f7" },
+  container: { flex: 1, backgroundColor: "#ffffff" },
+  safeArea: { flex: 1, backgroundColor: AUTH_ACTION_COLOR },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: "#fff",
+    paddingVertical: 16,
+    backgroundColor: AUTH_ACTION_COLOR,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: "rgba(0,0,0,0.08)",
   },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#111" },
 
   yearBar: {
     flexDirection: "row",

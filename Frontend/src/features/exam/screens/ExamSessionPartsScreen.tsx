@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView
 import { Ionicons } from "@expo/vector-icons";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
+import { authFetch } from "../../../shared/api/authFetch";
 
 export function ExamSessionPartsScreen({ navigation, route }: any) {
   const { examId, sessionId, partStats: initialPartStats = [] } = route.params;
@@ -15,7 +16,7 @@ export function ExamSessionPartsScreen({ navigation, route }: any) {
       return;
     }
 
-    fetch(`${API_BASE_URL}/exams/${examId}/sessions/${sessionId}/parts`)
+    authFetch(`${API_BASE_URL}/exams/${examId}/sessions/${sessionId}/parts`)
       .then((res) => res.json())
       .then((data) => {
         if (data.statusCode === 200 && Array.isArray(data.data?.parts)) {

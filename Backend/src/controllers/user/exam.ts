@@ -153,7 +153,26 @@ const normalizeAnswerLabel = (value: unknown) => String(value ?? "").trim().toUp
 const isReadingQuestion = (question: Pick<SessionQuestionRecord, "question_number" | "part_number">) =>
   (question.question_number >= 101 && question.question_number <= 200) || question.part_number >= 5;
 
-const loadSessionData = async (examId: number, sessionId: number) => {
+const calculateReadingScore = (correctCount: number) =>
+  correctCount === 0 ? 5 : correctCount * 5 - 5;
+
+const calculateListeningScore = (correctCount: number) => {
+  if (correctCount === 0) {
+    return 5;
+  }
+
+  if (correctCount <= 75) {
+    return correctCount * 5 + 10;
+  }
+
+  if (correctCount <= 96) {
+    return correctCount * 5 + 15;
+  }
+
+  return 495;
+};
+
+const loadSessionData = async (examId: number, sessionId: number, userId?: number) => {
   const [exam, session] = await Promise.all([
     prisma.exam_sets.findFirst({
       where: { id: examId, deleted_at: null, status: "PUBLISHED" },
@@ -170,6 +189,7 @@ const loadSessionData = async (examId: number, sessionId: number) => {
       where: {
         id: sessionId,
         exam_set_id: examId,
+        ...(userId ? { user_id: userId } : {}),
       },
       select: {
         id: true,
@@ -424,9 +444,11 @@ export const startTestSession = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "examId không hợp lệ.", statusCode: 400 });
     }
     
-    // In a real application, user_id should be extracted from auth middleware (req.user.id).
-    // For now, assuming a mock user with ID 1 if not provided, or provided in body.
-    const userId = Number(req.body.userId || 1);
+    const userId = req.auth?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized.", statusCode: 401 });
+    }
 
     const [exam, questionCount] = await Promise.all([
       prisma.exam_sets.findUnique({
@@ -471,29 +493,54 @@ export const submitTestSession = async (req: Request, res: Response) => {
   try {
     const { id, sessionId } = req.params;
     const { answers } = req.body; // Array of { question_id, selected_option }
+    const examId = parseInt(String(id), 10);
+    const parsedSessionId = parseInt(String(sessionId), 10);
+    const userId = req.auth?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized.", statusCode: 401 });
+    }
     
     if (!answers || !Array.isArray(answers)) {
       return res.status(400).json({ message: "Dữ liệu trả lời không hợp lệ." });
     }
 
     // Lấy tất cả câu hỏi và đáp án đúng để tính điểm
+    const session = await prisma.test_sessions.findFirst({
+      where: {
+        id: parsedSessionId,
+        exam_set_id: examId,
+        user_id: userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        message: "Không tìm thấy phiên làm bài.",
+        statusCode: 404,
+      });
+    }
+
     const questions = await prisma.questions.findMany({
-      where: { exam_set_id: parseInt(String(id), 10) },
+      where: { exam_set_id: examId },
       select: { id: true, correct_answer: true, part_number: true },
     });
 
     const questionMap = new Map(questions.map(q => [q.id, q]));
     
     const userAnswersToSave = [];
-    let readingScore = 0; // Simplified scoring: just counting correct answers for now (Part 5,6,7)
-    let listeningScore = 0; // Simplified scoring: (Part 1,2,3,4)
+    let readingCorrectCount = 0;
+    let listeningCorrectCount = 0;
     
     for (const ans of answers) {
       const q = questionMap.get(ans.question_id);
       if (q) {
         const isCorrect = q.correct_answer === ans.selected_option;
         userAnswersToSave.push({
-          session_id: parseInt(String(sessionId), 10),
+          session_id: parsedSessionId,
           question_id: q.id,
           selected_option: ans.selected_option,
           is_correct: isCorrect,
@@ -502,15 +549,17 @@ export const submitTestSession = async (req: Request, res: Response) => {
         
         if (isCorrect) {
           if (q.part_number <= 4) {
-             listeningScore += 5; // Fake 5 points per question for simplicity
+             listeningCorrectCount += 1;
           } else {
-             readingScore += 5;
+             readingCorrectCount += 1;
           }
         }
       }
     }
 
     // Tính tổng số điểm
+    const readingScore = calculateReadingScore(readingCorrectCount);
+    const listeningScore = calculateListeningScore(listeningCorrectCount);
     const totalScore = listeningScore + readingScore;
 
     // Lưu User Answers
@@ -523,7 +572,7 @@ export const submitTestSession = async (req: Request, res: Response) => {
     // Cập nhật Test Session
     const finalStatus = req.body.isPractice ? "PRACTICE_COMPLETED" : "COMPLETED";
     const updatedSession = await prisma.test_sessions.update({
-      where: { id: parseInt(String(sessionId), 10) },
+      where: { id: parsedSessionId },
       data: {
         submitted_at: new Date(),
         status: finalStatus,
@@ -554,15 +603,23 @@ export const getTestSessionSummary = async (req: Request, res: Response) => {
   try {
     const examId = parseIntParam(req.params.id);
     const sessionId = parseIntParam(req.params.sessionId);
+    const userId = req.auth?.userId;
 
-    if (examId === null || sessionId === null) {
-      return res.status(400).json({
-        message: "examId hoặc sessionId không hợp lệ.",
-        statusCode: 400,
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized.",
+        statusCode: 401,
       });
     }
 
-    const data = await loadSessionData(examId, sessionId);
+    if (examId === null || sessionId === null) {
+      return res.status(401).json({
+        message: "examId hoặc sessionId không hợp lệ.",
+        statusCode: 401,
+      });
+    }
+
+    const data = await loadSessionData(examId, sessionId, userId);
 
     if (!data.exam || !data.session) {
       return res.status(404).json({
@@ -632,6 +689,14 @@ export const getTestSessionParts = async (req: Request, res: Response) => {
   try {
     const examId = parseIntParam(req.params.id);
     const sessionId = parseIntParam(req.params.sessionId);
+    const userId = req.auth?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized.",
+        statusCode: 401,
+      });
+    }
 
     if (examId === null || sessionId === null) {
       return res.status(400).json({
@@ -640,7 +705,7 @@ export const getTestSessionParts = async (req: Request, res: Response) => {
       });
     }
 
-    const data = await loadSessionData(examId, sessionId);
+    const data = await loadSessionData(examId, sessionId, userId);
 
     if (!data.exam || !data.session) {
       return res.status(404).json({
@@ -703,6 +768,14 @@ export const getTestSessionPartQuestions = async (req: Request, res: Response) =
     const examId = parseIntParam(req.params.id);
     const sessionId = parseIntParam(req.params.sessionId);
     const partNumber = parseIntParam(req.params.partNumber);
+    const userId = req.auth?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized.",
+        statusCode: 401,
+      });
+    }
 
     if (examId === null || sessionId === null || partNumber === null) {
       return res.status(400).json({
@@ -711,7 +784,7 @@ export const getTestSessionPartQuestions = async (req: Request, res: Response) =
       });
     }
 
-    const data = await loadSessionData(examId, sessionId);
+    const data = await loadSessionData(examId, sessionId, userId);
 
     if (!data.exam || !data.session) {
       return res.status(404).json({
@@ -749,6 +822,14 @@ export const getTestSessionQuestionDetail = async (req: Request, res: Response) 
     const examId = parseIntParam(req.params.id);
     const sessionId = parseIntParam(req.params.sessionId);
     const questionId = parseIntParam(req.params.questionId);
+    const userId = req.auth?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized.",
+        statusCode: 401,
+      });
+    }
 
     if (examId === null || sessionId === null || questionId === null) {
       return res.status(400).json({
@@ -757,7 +838,7 @@ export const getTestSessionQuestionDetail = async (req: Request, res: Response) 
       });
     }
 
-    const data = await loadSessionData(examId, sessionId);
+    const data = await loadSessionData(examId, sessionId, userId);
 
     if (!data.exam || !data.session) {
       return res.status(404).json({
@@ -859,12 +940,12 @@ export const getTestSessionQuestionDetail = async (req: Request, res: Response) 
 
 export const getWrongAnswerHistory = async (req: Request, res: Response) => {
   try {
-    const userId = parseIntParam(req.query.userId);
+    const userId = req.auth?.userId ?? null;
 
     if (userId === null) {
-      return res.status(400).json({
-        message: "userId không hợp lệ.",
-        statusCode: 400,
+      return res.status(401).json({
+        message: "Unauthorized.",
+        statusCode: 401,
       });
     }
 
