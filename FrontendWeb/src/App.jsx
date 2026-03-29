@@ -9,6 +9,7 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
+import * as XLSX from "xlsx";
 
 const ADMIN_CREDENTIALS = {
   email: "admin@gmail.com",
@@ -1086,22 +1087,67 @@ function ImportExcelPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewRows, setPreviewRows] = useState([]);
 
-  const handleFileChange = (event) => {
+  const extractPreviewFromExcel = async (file) => {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const firstSheetName = workbook.SheetNames?.[0];
+
+    if (!firstSheetName) {
+      throw new Error("Không tìm thấy sheet dữ liệu trong file Excel.");
+    }
+
+    const sheet = workbook.Sheets[firstSheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      defval: "",
+      raw: false,
+      blankrows: false,
+    });
+
+    if (!rows.length) {
+      throw new Error("File Excel không có dữ liệu để preview.");
+    }
+
+    const firstDataRow = rows[0];
+    const getByHeader = (targetHeader) => {
+      const key = Object.keys(firstDataRow).find(
+        (header) => String(header).trim().toUpperCase() === targetHeader,
+      );
+      return key ? String(firstDataRow[key] ?? "").trim() : "";
+    };
+
+    const image = getByHeader("QUESTION_IMAGE_URL");
+    const audio = getByHeader("QUESTION_AUDIO_URL");
+
+    if (!image && !audio) {
+      throw new Error(
+        "Không tìm thấy dữ liệu ở cột Question_Image_URL hoặc Question_Audio_URL tại dòng đầu tiên.",
+      );
+    }
+
+    setPreviewRows([
+      {
+        row: 1,
+        image,
+        audio,
+      },
+    ]);
+  };
+
+  const handleFileChange = async (event) => {
     const file = event.target.files?.[0] ?? null;
     setExcelFile(file);
     setStatus({ type: "", message: "" });
+    setPreviewRows([]);
 
     if (file) {
-      setPreviewRows([
-        {
-          row: 1,
-          content: "A sample question imported from Excel",
-          audio: "https://samplelib.com/lib/preview/mp3/sample-3s.mp3",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Fronalpstock_big.jpg/640px-Fronalpstock_big.jpg",
-        },
-      ]);
-    } else {
-      setPreviewRows([]);
+      try {
+        await extractPreviewFromExcel(file);
+      } catch (error) {
+        setStatus({
+          type: "error",
+          message: error instanceof Error ? error.message : "Không thể đọc file Excel để preview.",
+        });
+      }
     }
   };
 
@@ -1212,20 +1258,24 @@ function ImportExcelPage() {
               {previewRows.map((row) => (
                 <div key={row.row} className="preview-row">
                   <span>Dòng {row.row}</span>
-                  <div className="preview-row-media">
-                    <a className="url-link" href={row.image} target="_blank" rel="noreferrer">
-                      {row.image}
-                    </a>
-                    <img className="media-preview-image" src={row.image} alt={`Preview ảnh dòng ${row.row}`} />
-                  </div>
-                  <div className="preview-row-media">
-                    <a className="url-link" href={row.audio} target="_blank" rel="noreferrer">
-                      {row.audio}
-                    </a>
-                    <audio className="media-preview-audio" controls preload="none" src={row.audio}>
-                      Trình duyệt không hỗ trợ audio.
-                    </audio>
-                  </div>
+                  {row.image ? (
+                    <div className="preview-row-media">
+                      <a className="url-link" href={row.image} target="_blank" rel="noreferrer">
+                        {row.image}
+                      </a>
+                      <img className="media-preview-image" src={row.image} alt={`Preview ảnh dòng ${row.row}`} />
+                    </div>
+                  ) : null}
+                  {row.audio ? (
+                    <div className="preview-row-media">
+                      <a className="url-link" href={row.audio} target="_blank" rel="noreferrer">
+                        {row.audio}
+                      </a>
+                      <audio className="media-preview-audio" controls preload="none" src={row.audio}>
+                        Trình duyệt không hỗ trợ audio.
+                      </audio>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -1245,7 +1295,6 @@ function ImportExcelPage() {
           </div>
 
           <p className={`import-status ${status.type}`}>{status.message}</p>
-          <p className="mock-url">Backend endpoint: {`${EXAM_API_BASE_URL}/import-excel`}</p>
         </form>
       </div>
     </section>
