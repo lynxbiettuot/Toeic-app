@@ -39,7 +39,6 @@ const VOCAB_STATUS_FILTERS = [
   { value: "ALL", label: "Tất cả trạng thái" },
   { value: "PRIVATE", label: "Private" },
   { value: "PUBLIC", label: "Public" },
-  { value: "WARNING", label: "Cảnh báo" },
 ];
 
 const TABLE_PAGE_SIZE = 5;
@@ -456,47 +455,11 @@ function DashboardPage({ mode = "overview" }) {
   };
 
   const handleDeleteUserFlashcard = async (setId) => {
-    if (!selectedUserId) {
-      return;
-    }
-
-    try {
-      setError("");
-      await apiFetchJson(`${DASHBOARD_API_BASE_URL}/users/${selectedUserId}/flashcards/${setId}`, {
-        method: "DELETE",
-      });
-
-      const refreshed = await apiFetchJson(`${DASHBOARD_API_BASE_URL}/users/${selectedUserId}/profile`);
-      setProfile(refreshed.data);
-      setSelectedUserSet((current) => (current?.id === setId ? null : current));
-      setSelectedSetWordId(null);
-      setUserActionMessage("Đã xóa bộ flashcard của user.");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Không thể xóa flashcard user.");
-    }
+    // Chức năng xóa bị vô hiệu hóa bởi Admin
   };
 
   const handleWarnUserFlashcard = async (setId) => {
-    if (!selectedUserId) {
-      return;
-    }
-
-    try {
-      setError("");
-      const result = await apiFetchJson(
-        `${DASHBOARD_API_BASE_URL}/users/${selectedUserId}/flashcards/${setId}/warn`,
-        {
-          method: "POST",
-        },
-      );
-      setUserActionMessage(result?.message || "Đã gửi cảnh báo.");
-      
-      // Refetch profile để cập nhật warnedAt
-      const profileResult = await apiFetchJson(`${DASHBOARD_API_BASE_URL}/users/${selectedUserId}/profile`);
-      setProfile(profileResult.data);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Không thể cảnh báo bộ flashcard.");
-    }
+    // Chức năng cảnh báo bị vô hiệu hóa bởi Admin
   };
 
   const handleViewUserFlashcardSet = async (setId) => {
@@ -761,7 +724,7 @@ function DashboardPage({ mode = "overview" }) {
                 <p className="detail-label">Kho flashcard cá nhân (chỉ xem, cho phép xóa)</p>
                 <div className="action-grid">
                   {(profile?.flashcards ?? []).length === 0 ? (
-                    <p className="empty-state">User chưa có bộ flashcard public.</p>
+                    <p className="empty-state">User chưa có bộ flashcard nào.</p>
                   ) : (
                     (profile?.flashcards ?? []).map((item) => (
                       <div className="action-chip" key={item.id}>
@@ -776,21 +739,6 @@ function DashboardPage({ mode = "overview" }) {
                           >
                             Xem bộ
                           </button>
-                          <button
-                            className="table-inline-button"
-                            type="button"
-                            disabled={!!item.warnedAt}
-                            onClick={() => handleWarnUserFlashcard(item.id)}
-                          >
-                            {item.warnedAt ? "Đã cảnh báo" : "Cảnh báo"}
-                          </button>
-                          <button
-                            className="table-inline-button danger"
-                            type="button"
-                            onClick={() => handleDeleteUserFlashcard(item.id)}
-                          >
-                            Xóa
-                          </button>
                         </div>
                       </div>
                     ))
@@ -801,23 +749,6 @@ function DashboardPage({ mode = "overview" }) {
                   <section className="chart-card profile-card">
                     <div className="question-list-head">
                       <h3>Nội dung bộ: {selectedUserSet.title}</h3>
-                      <div className="table-action-group">
-                        <button
-                          className="table-inline-button"
-                          type="button"
-                          disabled={!!selectedUserSet.warnedAt}
-                          onClick={() => handleWarnUserFlashcard(selectedUserSet.id)}
-                        >
-                          {selectedUserSet.warnedAt ? "Đã cảnh báo" : "Cảnh báo"} người dùng
-                        </button>
-                        <button
-                          className="table-inline-button danger"
-                          type="button"
-                          onClick={() => handleDeleteUserFlashcard(selectedUserSet.id)}
-                        >
-                          Xóa bộ này
-                        </button>
-                      </div>
                     </div>
 
                     {selectedSetWord ? (
@@ -1441,6 +1372,7 @@ function ExamDetailPage() {
     answerD: "",
   });
   const [editDraft, setEditDraft] = useState({
+    part_number: "5",
     content: "",
     image_url: "",
     audio_url: "",
@@ -1449,6 +1381,8 @@ function ExamDetailPage() {
     answerB: "",
     answerC: "",
     answerD: "",
+    explanation: "",
+    transcript: "",
   });
 
   const loadExam = useCallback(async () => {
@@ -1506,18 +1440,28 @@ function ExamDetailPage() {
 
         if (!ignore) {
           setQuestionDetail(result.data);
+          const cleanValue = (val) => {
+            if (!val) return "";
+            const s = String(val).trim();
+            if (s.toLowerCase() === "không có" || s.toLowerCase() === "(trống)") return "";
+            return s;
+          };
+
           const answers = result.data?.answers ?? [];
-          const getAnswer = (label) => answers.find((item) => item.option_label === label)?.content || "";
+          const getAnswer = (label) => cleanValue(answers.find((item) => item.option_label === label)?.content);
 
           setEditDraft({
-            content: result.data?.content || "",
-            image_url: result.data?.image_url || "",
-            audio_url: result.data?.audio_url || "",
+            part_number: String(result.data?.part_number || "5"),
+            content: cleanValue(result.data?.content),
+            image_url: cleanValue(result.data?.image_url),
+            audio_url: cleanValue(result.data?.audio_url),
             correct_answer: result.data?.correct_answer || "A",
             answerA: getAnswer("A"),
             answerB: getAnswer("B"),
             answerC: getAnswer("C"),
             answerD: getAnswer("D"),
+            explanation: cleanValue(result.data?.explanation),
+            transcript: cleanValue(result.data?.transcript || result.data?.group?.transcript),
           });
           setSaveMessage("");
         }
@@ -1554,10 +1498,13 @@ function ExamDetailPage() {
       setSaveMessage("");
 
       const payload = {
+        part_number: Number.parseInt(editDraft.part_number, 10),
         content: editDraft.content,
         image_url: editDraft.image_url,
         audio_url: editDraft.audio_url,
         correct_answer: editDraft.correct_answer,
+        explanation: editDraft.explanation,
+        transcript: editDraft.transcript,
         answers: [
           { option_label: "A", content: editDraft.answerA },
           { option_label: "B", content: editDraft.answerB },
@@ -1671,13 +1618,23 @@ function ExamDetailPage() {
           <div className="question-list-head">
             <h3>Danh sách câu hỏi</h3>
             <button
-              className="exam-add-button question-add-inline"
+              className={`exam-add-button question-add-inline ${
+                (exam?.questions ?? []).length >= 200 || exam?.status === "PUBLISHED" ? "is-disabled" : ""
+              }`}
               type="button"
+              disabled={(exam?.questions ?? []).length >= 200 || exam?.status === "PUBLISHED"}
               onClick={() => {
                 setCreateMessage("");
                 setShowCreateQuestionForm(true);
                 setSelectedQuestionNumber(null);
               }}
+              title={
+                exam?.status === "PUBLISHED"
+                  ? "Không thể thêm câu khi đề đang công khai"
+                  : (exam?.questions ?? []).length >= 200
+                  ? "Đã đạt giới hạn 200 câu"
+                  : ""
+              }
             >
               + Thêm câu
             </button>
@@ -1730,8 +1687,14 @@ function ExamDetailPage() {
                 <p className="detail-label">Các đáp án</p>
                 <div className="answer-list">
                   {(questionDetail.answers ?? []).map((answer) => (
-                    <div key={answer.option_label} className="answer-item">
-                      <strong>{answer.option_label}.</strong> {answer.content}
+                    <div
+                      key={answer.option_label}
+                      className={`answer-item ${
+                        answer.option_label === questionDetail.correct_answer ? "is-correct" : ""
+                      }`}
+                    >
+                      <strong>{answer.option_label}.</strong> {answer.content || (Number.parseInt(questionDetail.part_number, 10) <= 2 ? "(Nghe)" : "Không có nội dung")}
+                      {answer.option_label === questionDetail.correct_answer && " (Đáp án đúng)"}
                     </div>
                   ))}
                 </div>
@@ -1739,73 +1702,137 @@ function ExamDetailPage() {
 
               <div className="answer-block">
                 <p className="detail-label">Sửa nhanh câu hỏi</p>
-                <textarea
-                  className="import-input import-textarea"
-                  value={editDraft.content}
-                  onChange={(event) =>
-                    setEditDraft((current) => ({ ...current, content: event.target.value }))
-                  }
-                />
-                <input
-                  className="import-input"
-                  placeholder="URL ảnh"
-                  value={editDraft.image_url}
-                  onChange={(event) =>
-                    setEditDraft((current) => ({ ...current, image_url: event.target.value }))
-                  }
-                />
-                <input
-                  className="import-input"
-                  placeholder="URL audio"
-                  value={editDraft.audio_url}
-                  onChange={(event) =>
-                    setEditDraft((current) => ({ ...current, audio_url: event.target.value }))
-                  }
-                />
-                <input
-                  className="import-input"
-                  placeholder="Đáp án A"
-                  value={editDraft.answerA}
-                  onChange={(event) =>
-                    setEditDraft((current) => ({ ...current, answerA: event.target.value }))
-                  }
-                />
-                <input
-                  className="import-input"
-                  placeholder="Đáp án B"
-                  value={editDraft.answerB}
-                  onChange={(event) =>
-                    setEditDraft((current) => ({ ...current, answerB: event.target.value }))
-                  }
-                />
-                <input
-                  className="import-input"
-                  placeholder="Đáp án C"
-                  value={editDraft.answerC}
-                  onChange={(event) =>
-                    setEditDraft((current) => ({ ...current, answerC: event.target.value }))
-                  }
-                />
-                <input
-                  className="import-input"
-                  placeholder="Đáp án D"
-                  value={editDraft.answerD}
-                  onChange={(event) =>
-                    setEditDraft((current) => ({ ...current, answerD: event.target.value }))
-                  }
-                />
-                <select
-                  className="exam-filter"
-                  value={editDraft.correct_answer}
-                  onChange={(event) =>
-                    setEditDraft((current) => ({ ...current, correct_answer: event.target.value }))
-                  }
-                >
-                  <option value="A">Đáp án đúng: A</option>
-                  <option value="B">Đáp án đúng: B</option>
-                  <option value="C">Đáp án đúng: C</option>
-                  <option value="D">Đáp án đúng: D</option>
-                </select>
+                <div className="import-input-group">
+                  <label>Part:</label>
+                  <select
+                    className="exam-filter"
+                    value={editDraft.part_number}
+                    onChange={(event) =>
+                      setEditDraft((current) => ({ ...current, part_number: event.target.value }))
+                    }
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                      <option key={num} value={num}>
+                        Part {num}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {[5, 6, 7].includes(Number.parseInt(editDraft.part_number, 10)) && (
+                  <div className="import-input-group">
+                    <label>Nội dung:</label>
+                    <textarea
+                      className="import-input import-textarea"
+                      placeholder="Nội dung câu hỏi"
+                      value={editDraft.content}
+                      onChange={(event) =>
+                        setEditDraft((current) => ({ ...current, content: event.target.value }))
+                      }
+                    />
+                  </div>
+                )}
+                <div className="import-input-group">
+                  <label>URL ảnh:</label>
+                  <input
+                    className="import-input"
+                    placeholder="URL ảnh"
+                    value={editDraft.image_url}
+                    onChange={(event) =>
+                      setEditDraft((current) => ({ ...current, image_url: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="import-input-group">
+                  <label>URL audio:</label>
+                  <input
+                    className="import-input"
+                    placeholder="URL audio"
+                    value={editDraft.audio_url}
+                    onChange={(event) =>
+                      setEditDraft((current) => ({ ...current, audio_url: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="import-input-group">
+                  <label>Đáp án A:</label>
+                  <input
+                    className="import-input"
+                    placeholder="Nội dung đáp án A"
+                    value={editDraft.answerA}
+                    disabled={[1, 2].includes(Number.parseInt(editDraft.part_number, 10))}
+                    onChange={(event) =>
+                      setEditDraft((current) => ({ ...current, answerA: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="import-input-group">
+                  <label>Đáp án B:</label>
+                  <input
+                    className="import-input"
+                    placeholder="Nội dung đáp án B"
+                    value={editDraft.answerB}
+                    disabled={[1, 2].includes(Number.parseInt(editDraft.part_number, 10))}
+                    onChange={(event) =>
+                      setEditDraft((current) => ({ ...current, answerB: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="import-input-group">
+                  <label>Đáp án C:</label>
+                  <input
+                    className="import-input"
+                    placeholder="Nội dung đáp án C"
+                    value={editDraft.answerC}
+                    disabled={[1, 2].includes(Number.parseInt(editDraft.part_number, 10))}
+                    onChange={(event) =>
+                      setEditDraft((current) => ({ ...current, answerC: event.target.value }))
+                    }
+                  />
+                </div>
+                {Number.parseInt(editDraft.part_number, 10) !== 2 && (
+                  <div className="import-input-group">
+                    <label>Đáp án D:</label>
+                    <input
+                      className="import-input"
+                      placeholder="Nội dung đáp án D"
+                      value={editDraft.answerD}
+                      disabled={[1].includes(Number.parseInt(editDraft.part_number, 10))}
+                      onChange={(event) =>
+                        setEditDraft((current) => ({ ...current, answerD: event.target.value }))
+                      }
+                    />
+                  </div>
+                )}
+                {[1, 2, 3, 4].includes(Number.parseInt(editDraft.part_number, 10)) && (
+                  <div className="import-input-group">
+                    <label>Transcript:</label>
+                    <textarea
+                      className="import-input import-textarea"
+                      placeholder="Nội dung transcript"
+                      value={editDraft.transcript}
+                      onChange={(event) =>
+                        setEditDraft((current) => ({ ...current, transcript: event.target.value }))
+                      }
+                    />
+                  </div>
+                )}
+                <div className="import-input-group">
+                  <label>Đúng:</label>
+                  <select
+                    className="exam-filter"
+                    value={editDraft.correct_answer}
+                    onChange={(event) =>
+                      setEditDraft((current) => ({ ...current, correct_answer: event.target.value }))
+                    }
+                  >
+                    <option value="A">Đáp án đúng: A</option>
+                    <option value="B">Đáp án đúng: B</option>
+                    <option value="C">Đáp án đúng: C</option>
+                    {Number.parseInt(editDraft.part_number, 10) !== 2 && (
+                      <option value="D">Đáp án đúng: D</option>
+                    )}
+                  </select>
+                </div>
 
                 <button className="import-button import-button-primary" type="button" onClick={handleSaveQuestion} disabled={saving}>
                   {saving ? "Đang lưu..." : "Lưu chỉnh sửa"}
@@ -1828,92 +1855,132 @@ function ExamDetailPage() {
                   Đóng
                 </button>
               </div>
-              <input
-                className="import-input"
-                type="number"
-                min="1"
-                placeholder="Part (ví dụ: 5)"
-                value={createDraft.part_number}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, part_number: event.target.value }))
-                }
-              />
-              <textarea
-                className="import-input import-textarea"
-                placeholder="Nội dung câu hỏi"
-                value={createDraft.content}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, content: event.target.value }))
-                }
-              />
-              <input
-                className="import-input"
-                placeholder="URL ảnh"
-                value={createDraft.image_url}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, image_url: event.target.value }))
-                }
-              />
-              <input
-                className="import-input"
-                placeholder="URL audio"
-                value={createDraft.audio_url}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, audio_url: event.target.value }))
-                }
-              />
-              <input
-                className="import-input"
-                placeholder="Đáp án A"
-                value={createDraft.answerA}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, answerA: event.target.value }))
-                }
-              />
-              <input
-                className="import-input"
-                placeholder="Đáp án B"
-                value={createDraft.answerB}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, answerB: event.target.value }))
-                }
-              />
-              <input
-                className="import-input"
-                placeholder="Đáp án C"
-                value={createDraft.answerC}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, answerC: event.target.value }))
-                }
-              />
-              <input
-                className="import-input"
-                placeholder="Đáp án D"
-                value={createDraft.answerD}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, answerD: event.target.value }))
-                }
-              />
-              <select
-                className="exam-filter"
-                value={createDraft.correct_answer}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, correct_answer: event.target.value }))
-                }
-              >
-                <option value="A">Đáp án đúng: A</option>
-                <option value="B">Đáp án đúng: B</option>
-                <option value="C">Đáp án đúng: C</option>
-                <option value="D">Đáp án đúng: D</option>
-              </select>
+              <div className="import-input-group">
+                <label>Part:</label>
+                <select
+                  className="exam-filter"
+                  value={createDraft.part_number}
+                  onChange={(event) =>
+                    setCreateDraft((current) => ({ ...current, part_number: event.target.value }))
+                  }
+                >
+                  {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                    <option key={num} value={num}>
+                      Part {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="import-input-group">
+                <label>Nội dung:</label>
+                <textarea
+                  className="import-input import-textarea"
+                  placeholder="Nội dung câu hỏi"
+                  value={createDraft.content}
+                  onChange={(event) =>
+                    setCreateDraft((current) => ({ ...current, content: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="import-input-group">
+                <label>URL ảnh:</label>
+                <input
+                  className="import-input"
+                  placeholder="URL ảnh"
+                  value={createDraft.image_url}
+                  onChange={(event) =>
+                    setCreateDraft((current) => ({ ...current, image_url: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="import-input-group">
+                <label>URL audio:</label>
+                <input
+                  className="import-input"
+                  placeholder="URL audio"
+                  value={createDraft.audio_url}
+                  onChange={(event) =>
+                    setCreateDraft((current) => ({ ...current, audio_url: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="import-input-group">
+                <label>Đáp án A:</label>
+                <input
+                  className="import-input"
+                  placeholder="Nội dung đáp án A"
+                  value={createDraft.answerA}
+                  disabled={[1, 2, 3, 4].includes(Number.parseInt(createDraft.part_number, 10))}
+                  onChange={(event) =>
+                    setCreateDraft((current) => ({ ...current, answerA: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="import-input-group">
+                <label>Đáp án B:</label>
+                <input
+                  className="import-input"
+                  placeholder="Nội dung đáp án B"
+                  value={createDraft.answerB}
+                  disabled={[1, 2, 3, 4].includes(Number.parseInt(createDraft.part_number, 10))}
+                  onChange={(event) =>
+                    setCreateDraft((current) => ({ ...current, answerB: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="import-input-group">
+                <label>Đáp án C:</label>
+                <input
+                  className="import-input"
+                  placeholder="Nội dung đáp án C"
+                  value={createDraft.answerC}
+                  disabled={[1, 2, 3, 4].includes(Number.parseInt(createDraft.part_number, 10))}
+                  onChange={(event) =>
+                    setCreateDraft((current) => ({ ...current, answerC: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="import-input-group">
+                <label>Đáp án D:</label>
+                <input
+                  className="import-input"
+                  placeholder="Nội dung đáp án D"
+                  value={createDraft.answerD}
+                  disabled={[1, 2, 3, 4].includes(Number.parseInt(createDraft.part_number, 10))}
+                  onChange={(event) =>
+                    setCreateDraft((current) => ({ ...current, answerD: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="import-input-group">
+                <label>Đúng:</label>
+                <select
+                  className="exam-filter"
+                  value={createDraft.correct_answer}
+                  onChange={(event) =>
+                    setCreateDraft((current) => ({ ...current, correct_answer: event.target.value }))
+                  }
+                >
+                  <option value="A">Đáp án đúng: A</option>
+                  <option value="B">Đáp án đúng: B</option>
+                  <option value="C">Đáp án đúng: C</option>
+                  <option value="D">Đáp án đúng: D</option>
+                </select>
+              </div>
 
               <button
                 className="import-button import-button-primary"
                 type="button"
                 onClick={handleCreateQuestion}
-                disabled={creatingQuestion}
+                disabled={creatingQuestion || (exam?.questions ?? []).length >= 200 || exam?.status === "PUBLISHED"}
               >
-                {creatingQuestion ? "Đang thêm..." : "Thêm câu"}
+                {creatingQuestion
+                  ? "Đang thêm..."
+                  : exam?.status === "PUBLISHED"
+                  ? "Không thể thêm (Public)"
+                  : (exam?.questions ?? []).length >= 200
+                  ? "Đã đạt giới hạn câu"
+                  : "Thêm câu"}
               </button>
             </div>
           ) : null}
@@ -2038,15 +2105,6 @@ function VocabManagementPage() {
   };
 
   const handleInlineStatusChange = async (setItem, nextDisplayStatus) => {
-    if (nextDisplayStatus === "WARNING") {
-      if (setItem.ownerType !== "USER") {
-        setMessage("Trạng thái Cảnh báo chỉ áp dụng cho bộ từ vựng do user đăng.");
-        return;
-      }
-      await handleWarnUserSet(setItem.id);
-      return;
-    }
-
     await changeSetStatus(setItem.id, nextDisplayStatus === "PUBLIC" ? "PUBLISHED" : "HIDDEN");
   };
 
@@ -2123,38 +2181,7 @@ function VocabManagementPage() {
     }
   };
 
-  const handleSoftDelete = async (setId) => {
-    try {
-      await apiFetchJson(`${VOCAB_API_BASE_URL}/${setId}`, { method: "DELETE" });
-      await fetchSets();
-      setMessage("Đã xóa mềm bộ từ vựng.");
-    } catch (requestError) {
-      setMessage(requestError instanceof Error ? requestError.message : "Không thể xóa mềm bộ từ vựng.");
-    }
-  };
 
-  const handleRestore = async (setId) => {
-    try {
-      await apiFetchJson(`${VOCAB_API_BASE_URL}/${setId}/restore`, { method: "POST" });
-      await fetchSets();
-      setMessage("Đã khôi phục bộ từ vựng.");
-    } catch (requestError) {
-      setMessage(requestError instanceof Error ? requestError.message : "Không thể khôi phục bộ từ vựng.");
-    }
-  };
-
-  const handleWarnUserSet = async (setId) => {
-    try {
-      const result = await apiFetchJson(`${VOCAB_API_BASE_URL}/${setId}/warn`, {
-        method: "POST",
-      });
-      setMessage(result.message || "Đã cảnh báo user.");
-      // Refetch list để cập nhật warnedAt
-      await fetchSets();
-    } catch (requestError) {
-      setMessage(requestError instanceof Error ? requestError.message : "Không thể cảnh báo user.");
-    }
-  };
 
   const loadSetDetail = async (setItem) => {
     const setId = setItem?.id;
@@ -2408,9 +2435,6 @@ function VocabManagementPage() {
                     >
                       <option value="PRIVATE">Private</option>
                       <option value="PUBLIC">Public</option>
-                      <option value="WARNING" disabled={item.ownerType !== "USER"}>
-                        Cảnh báo
-                      </option>
                     </select>
                   </td>
                   <td>

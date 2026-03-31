@@ -18,7 +18,26 @@ export const getPublicFlashcardSets = async (page: number, limit: number, search
   };
 
   if (currentUserId) {
-    whereClause.user = { id: { not: currentUserId } };
+    // Separate conditions for Admin sets and other User sets
+    whereClause.OR = [
+      { 
+        owner_user_id: null, 
+        status: 'PUBLISHED' // Admin sets must be PUBLISHED to be visible
+      },
+      { 
+        user: { id: { not: currentUserId } }, 
+        visibility: 'PUBLIC' 
+      }
+    ];
+    // Remove top-level visibility filter as it's now handled inside OR for more precision
+    delete whereClause.visibility;
+  } else {
+    // If no userId, showing everything public/published
+    whereClause.OR = [
+      { owner_user_id: null, status: 'PUBLISHED' },
+      { owner_user_id: { not: null }, visibility: 'PUBLIC' }
+    ];
+    delete whereClause.visibility;
   }
 
   if (search) {
@@ -36,6 +55,7 @@ export const getPublicFlashcardSets = async (page: number, limit: number, search
         description: true,
         card_count: true,
         user: { select: { id: true, full_name: true } },
+        admin: { select: { id: true, full_name: true } },
         saved_by: { select: { id: true } }
       },
       orderBy: { created_at: 'desc' }
@@ -48,8 +68,8 @@ export const getPublicFlashcardSets = async (page: number, limit: number, search
     title: set.title,
     description: set.description,
     cardCount: set.card_count,
-    authorName: set.user?.full_name || 'Unknown',
-    authorId: set.user?.id || null,
+    authorName: set.user?.full_name || set.admin?.full_name || 'admin',
+    authorId: set.user?.id || null, 
     savedCount: set.saved_by.length
   }));
 
@@ -77,6 +97,7 @@ export const getPublicFlashcardSetDetail = async (setId: number) => {
       description: true,
       card_count: true,
       user: { select: { id: true, full_name: true } },
+      admin: { select: { id: true, full_name: true } },
       flashcards: {
         select: {
           id: true,
@@ -100,8 +121,8 @@ export const getPublicFlashcardSetDetail = async (setId: number) => {
     title: set.title,
     description: set.description,
     cardCount: set.card_count,
-    authorName: set.user?.full_name || 'Unknown',
-    authorId: set.user?.id || null,
+    authorName: set.user?.full_name || set.admin?.full_name || 'admin',
+    authorId: set.user?.id || set.admin?.id || null,
     savedCount: set.saved_by.length
   };
 

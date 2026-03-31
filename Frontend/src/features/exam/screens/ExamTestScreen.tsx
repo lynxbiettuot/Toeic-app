@@ -58,7 +58,7 @@ export function ExamTestScreen({ navigation, route }: any) {
     setLoading(true);
     setLoadError(null);
 
-    fetch(`${API_BASE_URL}/exams/${examId}/questions`)
+    authFetch(`${API_BASE_URL}/exams/${examId}/questions`)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok || data?.statusCode !== 200 || !Array.isArray(data?.data?.questions)) {

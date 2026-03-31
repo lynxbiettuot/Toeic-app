@@ -21,7 +21,7 @@ export function ExamIntroScreen({ navigation, route }: any) {
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/exams/${examId}`)
+    authFetch(`${API_BASE_URL}/exams/${examId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.statusCode === 200) {

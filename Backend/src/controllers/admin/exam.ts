@@ -317,6 +317,10 @@ export const importExamFromExcel = async (req: Request, res: Response) => {
         createdQuestionCount += 1;
       }
 
+      if (createdQuestionCount !== 200) {
+        throw new Error(`Đề thi TOEIC không hợp lệ. Tổng số câu hỏi bóc tách được phải là 200 câu (Hiện có: ${createdQuestionCount} câu).`);
+      }
+
       return exam;
     });
 
@@ -680,6 +684,19 @@ export const updateExamStatus = async (req: Request, res: Response) => {
       });
     }
 
+    if (status === "PUBLISHED") {
+      const questionCount = await prisma.questions.count({
+        where: { exam_set_id: examSetId },
+      });
+
+      if (questionCount !== 200) {
+        return res.status(400).json({
+          message: `Không thể công khai đề thi. Đề thi phải có đủ 200 câu hỏi trước khi xuất bản (Hiện có: ${questionCount} câu).`,
+          statusCode: 400,
+        });
+      }
+    }
+
     const updated = await prisma.exam_sets.update({
       where: {
         id: examSetId,
@@ -859,6 +876,7 @@ export const createQuestion = async (req: Request, res: Response) => {
       },
       select: {
         id: true,
+        status: true,
       },
     });
 
@@ -869,10 +887,17 @@ export const createQuestion = async (req: Request, res: Response) => {
       });
     }
 
-    const partNumber = parseIntegerField(req.body.part_number, 5) ?? 5;
-    if (partNumber <= 0) {
+    if (exam.status === "PUBLISHED") {
       return res.status(400).json({
-        message: "part_number phải là số nguyên dương.",
+        message: "Đề thi đang ở chế độ Công khai, không thể thêm câu hỏi mới.",
+        statusCode: 400,
+      });
+    }
+
+    const partNumber = parseIntegerField(req.body.part_number, 5) ?? 5;
+    if (partNumber < 1 || partNumber > 7) {
+      return res.status(400).json({
+        message: "part_number phải nằm trong khoảng từ 1 đến 7.",
         statusCode: 400,
       });
     }
@@ -1041,6 +1066,19 @@ export const updateQuestionDetail = async (req: Request, res: Response) => {
       if (req.body[field] !== undefined) {
         const normalized = req.body[field] === null ? null : String(req.body[field]).trim();
         updateData[field] = normalized === "" ? null : normalized;
+      }
+    }
+
+    if (req.body.part_number !== undefined) {
+      const partNumber = parseIntegerField(req.body.part_number, undefined);
+      if (partNumber !== undefined) {
+        if (partNumber < 1 || partNumber > 7) {
+          return res.status(400).json({
+            message: "part_number phải nằm trong khoảng từ 1 đến 7.",
+            statusCode: 400,
+          });
+        }
+        updateData.part_number = partNumber;
       }
     }
 
