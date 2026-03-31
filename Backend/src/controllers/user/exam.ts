@@ -209,45 +209,51 @@ const loadSessionData = async (examId: number, sessionId: number, userId?: numbe
     return { exam: null, session: null };
   }
 
-  const [questions, userAnswers] = await Promise.all([
-    prisma.questions.findMany({
-      where: { exam_set_id: examId },
-      include: {
-        answers: {
-          select: {
-            id: true,
-            option_label: true,
-            content: true,
-          },
-        },
-        group: {
-          select: {
-            id: true,
-            part_number: true,
-            passage_text: true,
-            transcript: true,
-            image_url: true,
-            audio_url: true,
-          },
-        },
-      },
-      orderBy: { question_number: "asc" },
-    }),
-    prisma.user_answers.findMany({
-      where: {
-        session_id: sessionId,
-      },
-      select: {
-        question_id: true,
-        selected_option: true,
-        is_correct: true,
-        answered_at: true,
-        ai_explanation: true,
-      },
-    }),
-  ]);
+  // Lấy các câu trả lời của user trong session này
+  const userAnswers = await prisma.user_answers.findMany({
+    where: {
+      session_id: sessionId,
+    },
+    select: {
+      question_id: true,
+      selected_option: true,
+      is_correct: true,
+      answered_at: true,
+      ai_explanation: true,
+    },
+  });
 
   const userAnswerMap = new Map(userAnswers.map((item) => [item.question_id, item]));
+  const sessionQuestionIds = userAnswers.map((ua) => ua.question_id);
+
+  // Lấy danh sách câu hỏi
+  const questions = await prisma.questions.findMany({
+    where: {
+      exam_set_id: examId,
+      // Nếu là phiên luyện tập, chỉ lấy những câu đã làm trong phiên đó
+      ...(session.status === "PRACTICE_COMPLETED" ? { id: { in: sessionQuestionIds } } : {}),
+    },
+    include: {
+      answers: {
+        select: {
+          id: true,
+          option_label: true,
+          content: true,
+        },
+      },
+      group: {
+        select: {
+          id: true,
+          part_number: true,
+          passage_text: true,
+          transcript: true,
+          image_url: true,
+          audio_url: true,
+        },
+      },
+    },
+    orderBy: { question_number: "asc" },
+  });
 
   return {
     exam,
@@ -949,29 +955,40 @@ export const getWrongAnswerHistory = async (req: Request, res: Response) => {
       });
     }
 
-    // Lấy tất cả phiên thi COMPLETED của user, join exam info
-    const sessions = await prisma.test_sessions.findMany({
+    // Lấy tất cả câu trả lời của user từ trước đến nay (cả đề thi chính và luyện tập)
+    const allUserAnswers = await prisma.user_answers.findMany({
       where: {
-        user_id: userId,
-        status: "COMPLETED",
+        session: {
+          user_id: userId,
+        },
       },
       select: {
-        id: true,
-        exam_set_id: true,
-        submitted_at: true,
-        total_score: true,
-        exam_set: {
+        session_id: true,
+        question_id: true,
+        selected_option: true,
+        is_correct: true,
+        answered_at: true,
+        question: {
           select: {
             id: true,
-            title: true,
-            year: true,
+            exam_set_id: true,
+            question_number: true,
+            part_number: true,
+            content: true,
+            exam_set: {
+              select: {
+                id: true,
+                title: true,
+                year: true,
+              },
+            },
           },
         },
       },
-      orderBy: { submitted_at: "desc" },
+      orderBy: { answered_at: "desc" },
     });
 
-    if (sessions.length === 0) {
+    if (allUserAnswers.length === 0) {
       return res.status(200).json({
         message: "Không có lịch sử sai sót.",
         statusCode: 200,
@@ -979,39 +996,28 @@ export const getWrongAnswerHistory = async (req: Request, res: Response) => {
       });
     }
 
-    const sessionIds = sessions.map((s) => s.id);
-
-    // Lấy tất cả câu trả lời sai từ các phiên thi này
-    const wrongAnswers = await prisma.user_answers.findMany({
-      where: {
-        session_id: { in: sessionIds },
-        is_correct: false,
-      },
-      select: {
-        session_id: true,
-        question_id: true,
-        selected_option: true,
-        question: {
-          select: {
-            id: true,
-            question_number: true,
-            part_number: true,
-            content: true,
-          },
-        },
-      },
-      orderBy: { question: { question_number: "asc" } },
-    });
-
-    // Nhóm câu sai theo session
-    const wrongBySession = new Map<number, typeof wrongAnswers>();
-    for (const wa of wrongAnswers) {
-      const existing = wrongBySession.get(wa.session_id) ?? [];
-      existing.push(wa);
-      wrongBySession.set(wa.session_id, existing);
+    // Tìm trạng thái mới nhất cho từng câu hỏi
+    const latestStatusByQuestion = new Map<number, typeof allUserAnswers[0]>();
+    for (const ua of allUserAnswers) {
+      if (!latestStatusByQuestion.has(ua.question_id)) {
+        latestStatusByQuestion.set(ua.question_id, ua);
+      }
     }
 
-    // Nhóm sessions theo exam, lấy session gần nhất cho mỗi exam
+    // Lọc ra các câu mà trạng thái mới nhất là "SAI"
+    const currentWrongAnswers = Array.from(latestStatusByQuestion.values()).filter(
+      (ua) => ua.is_correct === false,
+    );
+
+    if (currentWrongAnswers.length === 0) {
+      return res.status(200).json({
+        message: "Hiện không có câu sai nào cần làm lại.",
+        statusCode: 200,
+        data: [],
+      });
+    }
+
+    // Nhóm câu sai theo đề thi (Exam)
     const examMap = new Map<
       number,
       {
@@ -1020,7 +1026,6 @@ export const getWrongAnswerHistory = async (req: Request, res: Response) => {
         exam_year: number | null;
         session_id: number;
         submitted_at: Date | null;
-        total_score: number | null;
         wrong_count: number;
         wrong_questions: {
           question_id: number;
@@ -1032,33 +1037,42 @@ export const getWrongAnswerHistory = async (req: Request, res: Response) => {
       }
     >();
 
-    for (const session of sessions) {
-      const examId = session.exam_set_id;
-      // Chỉ lấy lần làm gần nhất cho mỗi đề (sessions đã sort desc by submitted_at)
-      if (examMap.has(examId)) continue;
+    for (const ua of currentWrongAnswers) {
+      const exam = ua.question.exam_set;
+      if (!exam) continue;
 
-      const wrongs = wrongBySession.get(session.id) ?? [];
-      if (wrongs.length === 0) continue; // Bỏ qua đề không có câu sai
+      const existing = examMap.get(exam.id) ?? {
+        exam_id: exam.id,
+        exam_title: exam.title,
+        exam_year: exam.year,
+        session_id: ua.session_id,
+        submitted_at: ua.answered_at,
+        wrong_count: 0,
+        wrong_questions: [],
+      };
 
-      examMap.set(examId, {
-        exam_id: examId,
-        exam_title: session.exam_set.title,
-        exam_year: session.exam_set.year,
-        session_id: session.id,
-        submitted_at: session.submitted_at,
-        total_score: session.total_score,
-        wrong_count: wrongs.length,
-        wrong_questions: wrongs.map((wa) => ({
-          question_id: wa.question_id,
-          question_number: wa.question.question_number,
-          part_number: wa.question.part_number,
-          content: wa.question.content,
-          selected_option: wa.selected_option,
-        })),
+      existing.wrong_count += 1;
+      existing.wrong_questions.push({
+        question_id: ua.question_id,
+        question_number: ua.question.question_number,
+        part_number: ua.question.part_number,
+        content: ua.question.content,
+        selected_option: ua.selected_option,
       });
+
+      // Đảm bảo session_id và submitted_at là của lần gần nhất (đã sort desc rồi nên lấy cái đầu tiên gặp là được)
+      if (existing.wrong_questions.length === 1) {
+        existing.session_id = ua.session_id;
+        existing.submitted_at = ua.answered_at;
+      }
+
+      examMap.set(exam.id, existing);
     }
 
-    const result = Array.from(examMap.values());
+    // Sắp xếp lại các đề thi theo thời gian trả lời sai gần nhất
+    const result = Array.from(examMap.values()).sort(
+      (a, b) => (b.submitted_at?.getTime() ?? 0) - (a.submitted_at?.getTime() ?? 0),
+    );
 
     return res.status(200).json({
       message: "Lấy lịch sử sai sót thành công.",
