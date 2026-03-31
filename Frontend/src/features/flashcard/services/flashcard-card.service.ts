@@ -1,8 +1,3 @@
-/**
- * Flashcard Card Service
- * API functions for flashcard card CRUD operations
- */
-
 import type { Flashcard, FlashcardSet } from '../types';
 import { authFetch, buildUrl, parseJson } from './api-client';
 

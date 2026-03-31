@@ -1,7 +1,3 @@
-/**
- * Flashcard Card Types
- */
-
 export type Flashcard = {
   id: number;
   set_id: number;

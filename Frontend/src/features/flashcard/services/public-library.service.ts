@@ -1,8 +1,3 @@
-/**
- * Public Library Service
- * API functions for browsing and importing public flashcard sets
- */
-
 import type { GetPublicSetsResponse, PublicFlashcardSetDetail } from '../types';
 import { authFetch, buildUrl, parseJson } from './api-client';
 
@@ -12,9 +7,9 @@ export const getPublicFlashcardSets = async (
   search: string = '',
   userId: number | null = null
 ): Promise<GetPublicSetsResponse> => {
-  const params = new URLSearchParams({ 
-    page: String(page), 
-    limit: String(limit), 
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
     search,
     ...(userId ? { userId: String(userId) } : {})
   });

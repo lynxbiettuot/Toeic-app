@@ -1,8 +1,3 @@
-/**
- * Normalizers for Flashcard feature
- * Handle data normalization and type conversions
- */
-
 export type ReviewRating = 'FORGOT' | 'HARD' | 'GOOD' | 'EASY';
 export type VisibilityMode = 'PUBLIC' | 'PRIVATE';
 

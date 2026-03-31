@@ -1,8 +1,3 @@
-/**
- * Public Library Service
- * Business logic for public flashcard library operations
- */
-
 import { prisma } from '../../lib/prisma.js';
 
 export interface PublicSetData {
@@ -154,7 +149,6 @@ export const importFlashcardSet = async (sourceSetId: number, userId: number) =>
     });
   }
 
-  // Mark source set as saved by this user (increase saved count)
   await prisma.user_saved_sets.upsert({
     where: {
       user_id_set_id: {

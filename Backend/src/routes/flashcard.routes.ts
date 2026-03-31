@@ -13,7 +13,8 @@ import {
   rateReviewCard,
   getPublicFlashcardSets,
   getPublicFlashcardSetDetail,
-  importFlashcardSet
+  importFlashcardSet,
+  getPracticeCards
 } from '../controllers/flashcard/index.js';
 import { requireUserAuth } from '../middlewares/auth.js';
 
@@ -38,5 +39,6 @@ router.get('/review/due', getDueReviewCards);
 router.get('/review/stats/today', getTodayReviewStats);
 router.post('/review/:cardId/rate', rateReviewCard);
 router.post('/public/:setId/import', importFlashcardSet);
+router.get('/practice', getPracticeCards);
 
 export default router;

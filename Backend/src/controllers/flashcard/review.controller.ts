@@ -78,3 +78,25 @@ export const getTodayReviewStats = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Internal server error', statusCode: 500 });
   }
 };
+
+export const getPracticeCards = async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth?.userId ?? null;
+    const limitParams = req.query.limit;
+    const limit = limitParams ? parseInt(limitParams as string, 10) : 50;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized', statusCode: 401 });
+    }
+
+    const result = await SpacedRepetitionService.getPracticeCards(userId, limit);
+
+    return res.json({
+      statusCode: 200,
+      data: { cards: result }
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal server error', statusCode: 500 });
+  }
+};

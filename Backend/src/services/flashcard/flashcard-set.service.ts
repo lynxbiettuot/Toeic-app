@@ -1,8 +1,3 @@
-/**
- * Flashcard Set Service
- * Business logic for CRUD operations on flashcard sets
- */
-
 import { prisma } from '../../lib/prisma.js';
 import { ensureOwnership } from '../../utils/flashcard/index.js';
 

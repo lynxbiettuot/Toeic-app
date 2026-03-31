@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
-import { getDueReviewCards, getTodayReviewStats, rateReviewCard, getAllUserFlashcards } from '../services';
+import { getDueReviewCards, getTodayReviewStats, rateReviewCard, getPracticeCards } from '../services';
 import { BottomNavbar, NavScreen } from '../../../shared/components/BottomNavbar';
 import type { ReviewFlashcard, ReviewRating } from '../types';
 
@@ -131,7 +131,7 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
   const startExtraPractice = async () => {
     setLoading(true);
     try {
-      const allUserCards = await getAllUserFlashcards(userId);
+      const allUserCards = await getPracticeCards(userId, 50);
       if (allUserCards.length === 0) {
         setMessage('Không có thẻ nào để luyện tập.');
         setLoading(false);
@@ -159,7 +159,7 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
     );
   }
 
-  if (dueCount === 0 || mode === 'extra') {
+  if (!activeCard) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.topBar}>
@@ -173,22 +173,22 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
         <View style={styles.completeWrap}>
           <Text style={styles.completeTitle}>Bạn đã hoàn thành toàn bộ từ vựng cần ôn tập ngày hôm nay!</Text>
           <Text style={styles.completeSubTitle}>Bạn đã ôn {reviewedToday} thẻ trong hôm nay.</Text>
-          
+
           {mode === 'review' && (
             <Pressable style={[styles.backHomeBtn, { marginBottom: 12 }]} onPress={startExtraPractice} disabled={loading}>
               <Text style={styles.backHomeBtnText}>{loading ? 'Đang chờ...' : 'Tiếp tục luyện tập thêm'}</Text>
             </Pressable>
           )}
-          
+
           <Pressable style={styles.backHomeBtn} onPress={onBackHome}>
             <Text style={styles.backHomeBtnText}>Về trang chủ</Text>
           </Pressable>
         </View>
 
-        <BottomNavbar 
-          activeScreen="spaced-review" 
-          onNavigate={onNavigate} 
-          onLogout={onLogout} 
+        <BottomNavbar
+          activeScreen="spaced-review"
+          onNavigate={onNavigate}
+          onLogout={onLogout}
         />
       </SafeAreaView>
     );
@@ -258,10 +258,10 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
         )}
       </View>
 
-      <BottomNavbar 
-        activeScreen="spaced-review" 
-        onNavigate={onNavigate} 
-        onLogout={onLogout} 
+      <BottomNavbar
+        activeScreen="spaced-review"
+        onNavigate={onNavigate}
+        onLogout={onLogout}
       />
     </SafeAreaView>
   );

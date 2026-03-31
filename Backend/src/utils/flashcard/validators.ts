@@ -1,8 +1,3 @@
-/**
- * Validators for Flashcard feature
- * Handle parsing and validating input values
- */
-
 export const parseUserId = (value: unknown): number | null => {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {

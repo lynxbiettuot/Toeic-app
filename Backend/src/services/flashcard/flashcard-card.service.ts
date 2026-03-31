@@ -1,8 +1,3 @@
-/**
- * Flashcard Card Service
- * Business logic for CRUD operations on individual flashcards
- */
-
 import { prisma } from '../../lib/prisma.js';
 import { ensureOwnership, updateCardCount } from '../../utils/flashcard/index.js';
 

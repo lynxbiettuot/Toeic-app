@@ -1,7 +1,3 @@
-/**
- * API utility functions for Flashcard service layer
- */
-
 import { API_BASE_URL } from '../../../config/api';
 import { authFetch } from '../../../shared/api/authFetch';
 

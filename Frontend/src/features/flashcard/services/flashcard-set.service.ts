@@ -1,8 +1,3 @@
-/**
- * Flashcard Set Service
- * API functions for flashcard set CRUD operations
- */
-
 import type { FlashcardSet, VisibilityMode } from '../types';
 import { authFetch, buildUrl, parseJson } from './api-client';
 
