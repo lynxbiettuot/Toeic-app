@@ -43,6 +43,19 @@ const VOCAB_STATUS_FILTERS = [
 
 const TABLE_PAGE_SIZE = 5;
 
+// Biến quản lý trạng thái làm mới token để tránh gọi nhiều lần
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+function onTokenRefreshed(newAccessToken) {
+  refreshSubscribers.map((cb) => cb(newAccessToken));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(cb) {
+  refreshSubscribers.push(cb);
+}
+
 const apiFetchJson = async (url, options = {}) => {
   const token = localStorage.getItem("toeic_admin_token");
   
@@ -67,8 +80,56 @@ const apiFetchJson = async (url, options = {}) => {
   if (!response.ok) {
     // Nếu bị Unauthorized (401), có thể token đã hết hạn
     if (response.status === 401 && !url.includes("/auth/login")) {
-      localStorage.removeItem("toeic_admin_token");
-      window.location.hash = "/login"; // Force redirect if unauthorized
+      const refreshToken = localStorage.getItem("toeic_admin_refresh_token");
+      
+      if (!refreshToken) {
+        localStorage.removeItem("toeic_admin_token");
+        window.location.hash = "/login";
+        throw new Error("Phiên đăng nhập hết hạn.");
+      }
+
+      if (!isRefreshing) {
+        isRefreshing = true;
+
+        try {
+          const refreshRes = await fetch("http://localhost:3000/auth/refresh-token", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+          });
+
+          const refreshData = await refreshRes.json();
+
+          if (refreshRes.status === 200 && refreshData.accessToken) {
+            const newAccessToken = refreshData.accessToken;
+            localStorage.setItem("toeic_admin_token", newAccessToken);
+            
+            isRefreshing = false;
+            onTokenRefreshed(newAccessToken);
+          } else {
+            isRefreshing = false;
+            localStorage.removeItem("toeic_admin_token");
+            localStorage.removeItem("toeic_admin_refresh_token");
+            window.location.hash = "/login";
+            throw new Error("Phiên đăng nhập hết hạn.");
+          }
+        } catch (err) {
+          isRefreshing = false;
+          window.location.hash = "/login";
+          throw err;
+        }
+      }
+
+      // Đợi refresh xong rồi thử lại request cũ
+      return new Promise((resolve) => {
+        addRefreshSubscriber(async (newToken) => {
+          const retryHeaders = {
+            ...headers,
+            "Authorization": `Bearer ${newToken}`
+          };
+          resolve(apiFetchJson(url, { ...options, headers: retryHeaders }));
+        });
+      });
     }
 
     let errorMessage = "Request failed.";
@@ -148,6 +209,7 @@ function LoginPage() {
 
       // Save token and admin info
       localStorage.setItem("toeic_admin_token", result.accessToken);
+      localStorage.setItem("toeic_admin_refresh_token", result.refreshToken || "");
       localStorage.setItem("toeic_admin_info", JSON.stringify(result.adminData || {}));
       
       navigate("/admin/dashboard");
@@ -222,7 +284,8 @@ function AdminLayout() {
 
   const handleLogout = () => {
     localStorage.removeItem("toeic_admin_token");
-    localStorage.removeItem("toeic_admin_info");
+    localStorage.removeItem("toeic_admin_refresh_token");
+    localStorage.setItem("toeic_admin_info", JSON.stringify({}));
     navigate("/login", { replace: true });
   };
 
@@ -428,7 +491,9 @@ function DashboardPage({ mode = "overview" }) {
     try {
       setError("");
       const token = localStorage.getItem("toeic_admin_token");
-      const response = await fetch(`${DASHBOARD_API_BASE_URL}/export?range=${range}`, {
+      const url = `${DASHBOARD_API_BASE_URL}/export?range=${range}`;
+
+      const response = await fetch(url, {
         headers: {
           "Authorization": token ? `Bearer ${token}` : ""
         }
@@ -436,19 +501,27 @@ function DashboardPage({ mode = "overview" }) {
       
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem("toeic_admin_token");
-          window.location.hash = "/login";
+          // Thử dùng apiFetchJson để tận dụng logic refresh
+          // (Dù apiFetchJson trả về json, nhưng nó sẽ giúp refresh token)
+          try {
+            await apiFetchJson(`${API_ROOT}/dashboard/overview?range=${range}`);
+            // Thử lại sau khi refresh thành công
+            return downloadOverviewReport();
+          } catch (e) {
+            window.location.hash = "/login";
+            throw new Error("Phiên đăng nhập hết hạn.");
+          }
         }
         throw new Error("Không thể xuất báo cáo.");
       }
 
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
-      anchor.href = url;
+      anchor.href = blobUrl;
       anchor.download = `dashboard-${range}-${Date.now()}.csv`;
       anchor.click();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(blobUrl);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Không thể xuất báo cáo.");
     }
