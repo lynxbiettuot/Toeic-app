@@ -327,7 +327,6 @@ export const getUserProfile = async (req: Request, res: Response) => {
     const ownSets = await prisma.flashcard_sets.findMany({
       where: {
         owner_user_id: userId,
-        visibility: "PUBLIC",
         deleted_at: null,
       },
       select: {
@@ -366,7 +365,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       status: set.status,
       visibility: set.visibility,
       cardCount: set.card_count,
-      type: "Public",
+      type: set.visibility === "PUBLIC" ? "Public" : "Private",
       warnedAt: null,
     }));
 
@@ -410,7 +409,6 @@ export const getUserFlashcardSetDetail = async (req: Request, res: Response) => 
       where: {
         id: setId,
         owner_user_id: userId,
-        visibility: "PUBLIC",
         deleted_at: null,
       },
       select: {
@@ -441,7 +439,7 @@ export const getUserFlashcardSetDetail = async (req: Request, res: Response) => 
 
     if (!set) {
       return res.status(404).json({
-        message: "Không tìm thấy bộ flashcard public của user.",
+        message: "Không tìm thấy bộ flashcard của user.",
         statusCode: 404,
       });
     }
