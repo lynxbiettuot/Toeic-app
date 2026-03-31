@@ -46,9 +46,7 @@ async function sendOtpNotification(userEmail: string, otp: string) {
   }
 }
 
-// ==========================================
 // ĐĂNG KÝ USER (SIGNUP)
-// ==========================================
 export const signup = async (req: Request, res: Response) => {
   try {
     const { email, password, confirmPassword, name } = req.body;
@@ -425,7 +423,7 @@ export const logoutUser = async (req: Request, res: Response) => {
         .delete({
           where: { token: currentRefreshToken },
         })
-        .catch(() => {});
+        .catch(() => { });
     }
 
     res.clearCookie("jwt");
@@ -454,7 +452,7 @@ export const logoutAdmin = async (req: Request, res: Response) => {
         .delete({
           where: { token: currentRefreshToken },
         })
-        .catch(() => {});
+        .catch(() => { });
     }
 
     res.clearCookie("jwt");

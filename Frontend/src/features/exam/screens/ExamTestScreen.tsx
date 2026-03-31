@@ -24,6 +24,7 @@ export function ExamTestScreen({ navigation, route }: any) {
   const [pages, setPages] = useState<any[][]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [showRescueButtons, setShowRescueButtons] = useState(false);
   
   // Timer state
   const [timeLeft, setTimeLeft] = useState(duration * 60);
@@ -55,10 +56,16 @@ export function ExamTestScreen({ navigation, route }: any) {
       .slice(0, 3);
 
   const fetchQuestions = () => {
+    // Reset state ngay lập tức để tránh render dữ liệu cũ
+    setQuestions([]);
+    setPages([]);
     setLoading(true);
     setLoadError(null);
+    setShowRescueButtons(false);
 
-    authFetch(`${API_BASE_URL}/exams/${examId}/questions`)
+    const fullUrl = `${API_BASE_URL}/exams/${examId}/questions`;
+    console.log(`[ExamTestScreen] 🔥 MOUNTED. Fetching: ${fullUrl} | sessionId: ${sessionId}`);
+    authFetch(fullUrl)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok || data?.statusCode !== 200 || !Array.isArray(data?.data?.questions)) {
@@ -114,7 +121,17 @@ export function ExamTestScreen({ navigation, route }: any) {
 
   useEffect(() => {
     fetchQuestions();
-  }, [examId]);
+    
+    // Nút cứu hộ xuất hiện sau 7 giây nếu vẫn đang quay
+    const timeout = setTimeout(() => {
+      setShowRescueButtons(prev => {
+        if (loading) return true;
+        return prev;
+      });
+    }, 7000);
+
+    return () => clearTimeout(timeout);
+  }, [examId, sessionId]);
 
   useEffect(() => {
     // Không chạy timer ở chế độ luyện tập câu sai
@@ -198,7 +215,8 @@ export function ExamTestScreen({ navigation, route }: any) {
   useEffect(() => {
     return () => {
       if (sound) {
-        sound.unloadAsync();
+        console.log(`[ExamTestScreen] 🧊 UNLOADING sound asset...`);
+        sound.unloadAsync().catch(err => console.log("Error unloading sound:", err));
       }
     };
   }, [sound]);
@@ -314,6 +332,23 @@ export function ExamTestScreen({ navigation, route }: any) {
     return (
       <View style={[styles.container, styles.center]}>
         <ActivityIndicator size="large" color={AUTH_ACTION_COLOR} />
+        {showRescueButtons && (
+          <View style={{ marginTop: 24, alignItems: "center" }}>
+            <Text style={{ color: "#666", marginBottom: 16 }}>Đang tải lâu hơn dự kiến...</Text>
+            <TouchableOpacity 
+              style={[styles.retryBtn, { width: 140 }]} 
+              onPress={fetchQuestions}
+            >
+              <Text style={styles.retryBtnText}>Thử lại</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.backBtn, { width: 140, marginTop: 8 }]} 
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.backBtnText}>Quay về</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   }
@@ -743,5 +778,20 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "700",
+  },
+  captionHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    gap: 4,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderColor: "#eee"
+  },
+  captionHintText: {
+    fontSize: 10,
+    color: "#888",
+    fontStyle: "italic"
   },
 });

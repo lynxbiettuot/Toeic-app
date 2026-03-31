@@ -81,17 +81,6 @@ export function ExamListPage() {
     }
   };
 
-  const handleDeleteExam = async (exam) => {
-    try {
-      await apiFetchJson(`${EXAM_API_BASE_URL}/${exam.id}`, {
-        method: "DELETE",
-      });
-
-      fetchExams();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Không thể xóa đề.");
-    }
-  };
 
   return (
     <section className="exam-screen">
@@ -178,13 +167,6 @@ export function ExamListPage() {
                       <Link className="table-action-link" to={`/admin/exams/${exam.id}`}>
                         Xem đề
                       </Link>
-                      <button
-                        className="table-inline-button danger"
-                        type="button"
-                        onClick={() => handleDeleteExam(exam)}
-                      >
-                        Xóa
-                      </button>
                     </div>
                   </td>
                 </tr>
