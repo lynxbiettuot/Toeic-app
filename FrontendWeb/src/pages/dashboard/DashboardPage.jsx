@@ -299,6 +299,18 @@ export function DashboardPage({ mode = "overview" }) {
             ) : (
               <div className="line-chart enhanced">
                 <svg viewBox="0 0 520 220" preserveAspectRatio="none">
+                  {/* Grid lines */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((p) => (
+                    <line
+                      key={p}
+                      x1="44"
+                      y1={174 - p * 150}
+                      x2="500"
+                      y2={174 - p * 150}
+                      stroke="#f1f5f7"
+                      strokeWidth="1"
+                    />
+                  ))}
                   <line x1="44" y1="24" x2="44" y2="174" className="line-axis" />
                   <line x1="44" y1="174" x2="500" y2="174" className="line-axis" />
                   <polyline points={linePoints} className="line-path" />
