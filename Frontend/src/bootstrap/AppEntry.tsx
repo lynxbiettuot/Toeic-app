@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthScreen } from '../features/auth/screens/AuthScreen';
 import { UserHomeScreen } from '../features/user/screens/UserHomeScreen';
 import { ExamListScreen } from '../features/exam/screens/ExamListScreen';
@@ -15,14 +17,26 @@ import { FlashcardSetDetailScreen } from '../features/flashcard/screens/Flashcar
 import { SpacedReviewScreen } from '../features/flashcard/screens/SpacedReviewScreen';
 import { DiscoveryScreen } from '../features/flashcard/screens/DiscoveryScreen';
 import { PublicSetDetailScreen } from '../features/flashcard/screens/PublicSetDetailScreen';
+import { ProfileScreen } from '../features/user/screens/ProfileScreen';
+import { EditProfileScreen } from '../features/user/screens/EditProfileScreen';
 import type { FlashcardSet, PublicFlashcardSet } from '../features/flashcard/types';
+import {
+  getAccessToken,
+  getSavedUserId,
+  getSavedDisplayName,
+  getSavedAvatarUrl,
+  saveDisplayName,
+  saveAvatarUrl,
+  clearAuthData,
+} from '../shared/storage/tokenStorage';
 
-type ScreenState = 
-  | 'auth' 
-  | 'home' 
-  | 'exam-list' 
-  | 'exam-intro' 
-  | 'exam-test' 
+type ScreenState =
+  | 'loading'
+  | 'auth'
+  | 'home'
+  | 'exam-list'
+  | 'exam-intro'
+  | 'exam-test'
   | 'exam-result'
   | 'exam-session-parts'
   | 'exam-session-part-questions'
@@ -33,17 +47,66 @@ type ScreenState =
   | 'flashcard-detail'
   | 'spaced-review'
   | 'discovery'
-  | 'public-detail';
+  | 'public-detail'
+  | 'profile'
+  | 'edit-profile';
 
 export function AppEntry() {
-  const [screen, setScreen] = useState<ScreenState>('auth');
-  const [displayName, setDisplayName] = useState('Linh');
-  const [userId, setUserId] = useState(1);
+  const [screen, setScreen] = useState<ScreenState>('loading');
+  const [displayName, setDisplayName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
   const [flashcardTab, setFlashcardTab] = useState<'my' | 'discover'>('my');
   const [examParams, setExamParams] = useState<any>({});
   const [selectedSet, setSelectedSet] = useState<FlashcardSet | null>(null);
   const [selectedPublicSet, setSelectedPublicSet] = useState<PublicFlashcardSet | null>(null);
   const [prevScreen, setPrevScreen] = useState<string>('');
+
+  // Restore login state from AsyncStorage on startup
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const [token, savedUserId, savedName, savedAvatar] = await Promise.all([
+          getAccessToken(),
+          getSavedUserId(),
+          getSavedDisplayName(),
+          getSavedAvatarUrl(),
+        ]);
+
+        if (token && savedUserId) {
+          setUserId(savedUserId);
+          setDisplayName(savedName ?? '');
+          setAvatarUrl(savedAvatar);
+          setScreen('home');
+        } else {
+          setScreen('auth');
+        }
+      } catch {
+        setScreen('auth');
+      }
+    };
+
+    restoreSession();
+  }, []);
+
+  const handleLogout = async () => {
+    await clearAuthData();
+    setUserId(null);
+    setDisplayName('');
+    setAvatarUrl(null);
+    setScreen('auth');
+  };
+
+  const handleNavigate = (navScreen: string) => {
+    if (navScreen === 'home') setScreen('home');
+    if (navScreen === 'exam-list') setScreen('exam-list');
+    if (navScreen === 'spaced-review') setScreen('spaced-review');
+    if (navScreen === 'flashcard-library') setScreen('flashcard-library');
+    if (navScreen === 'premium') {
+      // Placeholder for premium - maybe an alert or a simple screen
+      alert("Tính năng Cao cấp đang được phát triển!");
+    }
+  };
 
   // Ref luôn cập nhật để tránh stale closure trong navigationShim
   const screenRef = React.useRef(screen);
@@ -59,7 +122,7 @@ export function AppEntry() {
     navigate: (screenName: string, params?: any) => {
       // Always include userId in examParams for consistency across all exam screens
       if (params || screenName.includes('Exam') || screenName.includes('Wrong')) {
-        setExamParams((prev) => ({ ...prev, ...params, userId }));
+        setExamParams((prev: any) => ({ ...prev, ...params, userId }));
       }
       if (screenName === 'ExamIntroScreen') setScreen('exam-intro');
       if (screenName === 'ExamListScreen') setScreen('exam-list');
@@ -72,11 +135,16 @@ export function AppEntry() {
       }
       if (screenName === 'WrongAnswerListScreen') setScreen('wrong-list');
       if (screenName === 'ExamTestScreen') setScreen('exam-test');
+      if (screenName === 'Profile') setScreen('profile');
+      if (screenName === 'EditProfile') {
+        setExamParams(params); 
+        setScreen('edit-profile');
+      }
     },
     replace: (screenName: string, params?: any) => {
       // Always include userId in examParams for consistency across all exam screens
       if (params || screenName.includes('Exam') || screenName.includes('Wrong')) {
-        setExamParams((prev) => ({ ...prev, ...params, userId }));
+        setExamParams((prev: any) => ({ ...prev, ...params, userId }));
       }
       if (screenName === 'ExamTestScreen') setScreen('exam-test');
       if (screenName === 'ExamResultScreen') setScreen('exam-result');
@@ -98,14 +166,29 @@ export function AppEntry() {
       }
       if (cur === 'wrong-list') setScreen('wrong-history');
       if (cur === 'wrong-history') setScreen('home');
+      if (cur === 'profile') setScreen('home');
+      if (cur === 'edit-profile') setScreen('profile');
     }
   };
 
-  if (screen === 'public-detail' && selectedPublicSet) {
+  // Loading splash
+  if (screen === 'loading') {
     return (
+      <SafeAreaProvider>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#27ae60" />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  let content;
+
+  if (screen === 'public-detail' && selectedPublicSet) {
+    content = (
       <PublicSetDetailScreen
         setId={selectedPublicSet.id}
-        userId={userId}
+        userId={userId!}
         onBack={() => {
           setFlashcardTab('discover');
           setScreen('flashcard-library');
@@ -116,12 +199,10 @@ export function AppEntry() {
         }}
       />
     );
-  }
-
-  if (screen === 'discovery') {
-    return (
+  } else if (screen === 'discovery') {
+    content = (
       <DiscoveryScreen
-        userId={userId}
+        userId={userId!}
         onBack={() => setScreen('flashcard-library')}
         onViewDetail={(publicSet) => {
           setSelectedPublicSet(publicSet);
@@ -129,23 +210,19 @@ export function AppEntry() {
         }}
       />
     );
-  }
-
-  if (screen === 'flashcard-detail' && selectedSet) {
-    return (
+  } else if (screen === 'flashcard-detail' && selectedSet) {
+    content = (
       <FlashcardSetDetailScreen
-        userId={userId}
+        userId={userId!}
         flashcardSet={selectedSet}
         onBack={() => setScreen('flashcard-library')}
         onGoHome={() => setScreen('home')}
       />
     );
-  }
-
-  if (screen === 'flashcard-library') {
-    return (
+  } else if (screen === 'flashcard-library') {
+    content = (
       <FlashcardLibraryScreen
-        userId={userId}
+        userId={userId!}
         defaultTab={flashcardTab}
         onBack={() => setScreen('home')}
         onGoHome={() => setScreen('home')}
@@ -158,66 +235,58 @@ export function AppEntry() {
           setSelectedPublicSet(publicSet);
           setScreen('public-detail');
         }}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
       />
     );
-  }
-
-  if (screen === 'spaced-review') {
-    return <SpacedReviewScreen userId={userId} onBackHome={() => setScreen('home')} />;
-  }
-
-  if (screen === 'exam-result') {
-    return <ExamResultScreen navigation={navigationShim} route={{ params: examParams }} />;
-  }
-
-  if (screen === 'exam-session-parts') {
-    return <ExamSessionPartsScreen navigation={navigationShim} route={{ params: examParams }} />;
-  }
-
-  if (screen === 'exam-session-part-questions') {
-    return <ExamSessionPartQuestionsScreen navigation={navigationShim} route={{ params: examParams }} />;
-  }
-
-  if (screen === 'exam-question-detail') {
-    return <ExamQuestionDetailScreen navigation={navigationShim} route={{ params: examParams }} />;
-  }
-
-  if (screen === 'exam-test') {
-    return <ExamTestScreen navigation={navigationShim} route={{ params: examParams }} />;
-  }
-
-  if (screen === 'exam-intro') {
-    return <ExamIntroScreen navigation={navigationShim} route={{ params: examParams }} />;
-  }
-
-  if (screen === 'wrong-history') {
-    return (
+  } else if (screen === 'spaced-review') {
+    content = (
+      <SpacedReviewScreen 
+        userId={userId!} 
+        onBackHome={() => setScreen('home')} 
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+      />
+    );
+  } else if (screen === 'exam-result') {
+    content = <ExamResultScreen navigation={navigationShim} route={{ params: examParams }} />;
+  } else if (screen === 'exam-session-parts') {
+    content = <ExamSessionPartsScreen navigation={navigationShim} route={{ params: examParams }} />;
+  } else if (screen === 'exam-session-part-questions') {
+    content = <ExamSessionPartQuestionsScreen navigation={navigationShim} route={{ params: examParams }} />;
+  } else if (screen === 'exam-question-detail') {
+    content = <ExamQuestionDetailScreen navigation={navigationShim} route={{ params: examParams }} />;
+  } else if (screen === 'exam-test') {
+    content = <ExamTestScreen navigation={navigationShim} route={{ params: examParams }} />;
+  } else if (screen === 'exam-intro') {
+    content = <ExamIntroScreen navigation={navigationShim} route={{ params: examParams }} />;
+  } else if (screen === 'wrong-history') {
+    content = (
       <WrongAnswerHistoryScreen
         navigation={navigationShim}
         route={{ params: examParams }}
         onBack={() => setScreen('home')}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
       />
     );
-  }
-
-  if (screen === 'wrong-list') {
-    return <WrongAnswerListScreen navigation={navigationShim} route={{ params: examParams }} />;
-  }
-
-  if (screen === 'exam-list') {
-    return (
+  } else if (screen === 'wrong-list') {
+    content = <WrongAnswerListScreen navigation={navigationShim} route={{ params: examParams }} />;
+  } else if (screen === 'exam-list') {
+    content = (
       <ExamListScreen
         navigation={navigationShim}
-        route={{ params: examParams }}
+        route={{ params: { ...examParams, userId } }}
         onBack={() => setScreen('home')}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
       />
     );
-  }
-
-  if (screen === 'home') {
-    return (
+  } else if (screen === 'home') {
+    content = (
       <UserHomeScreen
         displayName={displayName}
+        avatarUrl={avatarUrl}
         onNavigateToExam={() => setScreen('exam-list')}
         onOpenFlashcard={() => {
           setFlashcardTab('my');
@@ -225,25 +294,61 @@ export function AppEntry() {
         }}
         onOpenVocabularyReview={() => setScreen('spaced-review')}
         onOpenWrongHistory={() => setScreen('wrong-history')}
+        onOpenProfile={() => setScreen('profile')}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+      />
+    );
+  } else if (screen === 'profile') {
+    content = (
+      <ProfileScreen 
+        navigation={navigationShim} 
+        onUpdateUser={async (name: string, avatar: string) => {
+          setDisplayName(name);
+          setAvatarUrl(avatar);
+          await saveDisplayName(name);
+          await saveAvatarUrl(avatar);
+        }}
+      />
+    );
+  } else if (screen === 'edit-profile') {
+    content = (
+      <EditProfileScreen 
+        navigation={navigationShim} 
+        route={{ params: examParams }} 
+        onUpdateUser={async (name: string, avatar: string) => {
+          setDisplayName(name);
+          setAvatarUrl(avatar);
+          await saveDisplayName(name);
+          await saveAvatarUrl(avatar);
+        }}
+      />
+    );
+  } else {
+    content = (
+      <AuthScreen
+        onLoginSuccess={(payload: any) => {
+          if (payload?.displayName) {
+            setDisplayName(payload.displayName);
+          }
+
+          if (payload?.userId) {
+            setUserId(payload.userId);
+          }
+
+          if (payload?.avatarUrl) {
+            setAvatarUrl(payload.avatarUrl);
+          }
+
+          setScreen('home');
+        }}
       />
     );
   }
 
   return (
-    <AuthScreen
-      onLoginSuccess={(payload) => {
-        if (payload?.displayName) {
-          setDisplayName(payload.displayName);
-        }
-
-        if (payload?.userId) {
-          setUserId(payload.userId);
-        }
-
-        setScreen('home');
-      }}
-    />
+    <SafeAreaProvider>
+      {content}
+    </SafeAreaProvider>
   );
 }
-
-

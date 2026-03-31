@@ -52,3 +52,8 @@ export const resetPasswordUser = (payload: {
   newPassword: string;
   confirmNewPassword: string;
 }) => postJson('/auth/reset-password/user', payload);
+
+export const verifyOtpUser = (payload: {
+  email: string;
+  otpVerify: string;
+}) => postJson('/auth/reset-password/verify-user', payload);

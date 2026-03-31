@@ -34,7 +34,7 @@ export function DiscoveryScreen({ userId, embedded = false, onBack, onViewDetail
     if (pageNum === 1) setLoading(true);
 
     try {
-      const data = await getPublicFlashcardSets(pageNum, 10, searchQuery);
+      const data = await getPublicFlashcardSets(pageNum, 10, searchQuery, userId);
       const filteredSets = data.sets
         .filter((setItem) => setItem.authorId !== userId)
         .sort((a, b) => b.savedCount - a.savedCount);

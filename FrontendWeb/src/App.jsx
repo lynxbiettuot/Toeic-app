@@ -44,10 +44,34 @@ const VOCAB_STATUS_FILTERS = [
 
 const TABLE_PAGE_SIZE = 5;
 
-const apiFetchJson = async (url, options) => {
-  const response = await fetch(url, options);
+const apiFetchJson = async (url, options = {}) => {
+  const token = localStorage.getItem("toeic_admin_token");
+  
+  // Only set Content-Type to JSON if body is not FormData
+  const headers = {
+    ...(options.headers || {}),
+  };
+
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
 
   if (!response.ok) {
+    // Nếu bị Unauthorized (401), có thể token đã hết hạn
+    if (response.status === 401 && !url.includes("/auth/login")) {
+      localStorage.removeItem("toeic_admin_token");
+      window.location.hash = "/login"; // Force redirect if unauthorized
+    }
+
     let errorMessage = "Request failed.";
     try {
       const errorResult = await response.json();
@@ -103,21 +127,34 @@ function LoginPage() {
     setError("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setError("");
 
-    const matchedAccount = ADMIN_ACCOUNTS.find(
-      (account) =>
-        account.email.toLowerCase() === form.email.trim().toLowerCase() &&
-        account.password === form.password,
-    );
+    try {
+      const response = await fetch("http://localhost:3000/auth/login/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          password: form.password,
+        }),
+      });
 
-    if (matchedAccount) {
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Đăng nhập thất bại.");
+      }
+
+      // Save token and admin info
+      localStorage.setItem("toeic_admin_token", result.accessToken);
+      localStorage.setItem("toeic_admin_info", JSON.stringify(result.adminData || {}));
+      
       navigate("/admin/dashboard");
-      return;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Có lỗi xảy ra khi đăng nhập.");
     }
-
-    setError("Sai email hoặc mật khẩu. Hãy dùng đúng tài khoản admin có sẵn.");
   };
 
   return (
@@ -177,6 +214,19 @@ function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const token = localStorage.getItem("toeic_admin_token");
+    if (!token) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("toeic_admin_token");
+    localStorage.removeItem("toeic_admin_info");
+    navigate("/login", { replace: true });
+  };
+
   const pageTitle = getPageTitle(location.pathname);
 
   return (
@@ -211,7 +261,7 @@ function AdminLayout() {
               <button
                 className="sidebar-link sidebar-logout"
                 type="button"
-                onClick={() => navigate("/login")}
+                onClick={handleLogout}
               >
                 Logout
               </button>
@@ -378,8 +428,18 @@ function DashboardPage({ mode = "overview" }) {
   const downloadOverviewReport = async () => {
     try {
       setError("");
-      const response = await fetch(`${DASHBOARD_API_BASE_URL}/export?range=${range}`);
+      const token = localStorage.getItem("toeic_admin_token");
+      const response = await fetch(`${DASHBOARD_API_BASE_URL}/export?range=${range}`, {
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : ""
+        }
+      });
+      
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("toeic_admin_token");
+          window.location.hash = "/login";
+        }
         throw new Error("Không thể xuất báo cáo.");
       }
 
@@ -871,13 +931,7 @@ function ExamListPage() {
       }
 
       const queryString = params.toString();
-      const response = await fetch(queryString ? `${EXAM_API_BASE_URL}?${queryString}` : EXAM_API_BASE_URL);
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Không thể tải danh sách đề thi.");
-      }
-
+      const result = await apiFetchJson(queryString ? `${EXAM_API_BASE_URL}?${queryString}` : EXAM_API_BASE_URL);
       setExams(result.data || []);
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : "Không thể tải danh sách đề thi.");
@@ -919,18 +973,10 @@ function ExamListPage() {
     const nextStatus = nextDisplayStatus === "PUBLIC" ? "PUBLISHED" : "HIDDEN";
 
     try {
-      const response = await fetch(`${EXAM_API_BASE_URL}/${exam.id}/status`, {
+      await apiFetchJson(`${EXAM_API_BASE_URL}/${exam.id}/status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ status: nextStatus }),
       });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Không thể cập nhật trạng thái đề.");
-      }
 
       fetchExams();
     } catch (requestError) {
@@ -940,14 +986,9 @@ function ExamListPage() {
 
   const handleDeleteExam = async (exam) => {
     try {
-      const response = await fetch(`${EXAM_API_BASE_URL}/${exam.id}`, {
+      await apiFetchJson(`${EXAM_API_BASE_URL}/${exam.id}`, {
         method: "DELETE",
       });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Không thể xóa đề.");
-      }
 
       fetchExams();
     } catch (requestError) {
@@ -1087,22 +1128,14 @@ function ExamCreatePage() {
 
     try {
       setIsSubmitting(true);
-      const response = await fetch(EXAM_API_BASE_URL, {
+      const result = await apiFetchJson(EXAM_API_BASE_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           title,
           year,
           type: "TOEIC",
         }),
       });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Không thể tạo đề thi nháp.");
-      }
 
       setMessage({ type: "success", value: result.message || "Tạo đề thi nháp thành công." });
       const examId = result?.data?.id;
@@ -1273,15 +1306,10 @@ function ImportExcelPage() {
     formData.append("excelFile", excelFile);
 
     try {
-      const response = await fetch(`${EXAM_API_BASE_URL}/import-excel`, {
+      const result = await apiFetchJson(`${EXAM_API_BASE_URL}/import-excel`, {
         method: "POST",
         body: formData,
       });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Import đề thi thất bại.");
-      }
 
       setStatus({
         type: "success",
@@ -1472,14 +1500,9 @@ function ExamDetailPage() {
       setLoadingQuestion(true);
 
       try {
-        const response = await fetch(
+        const result = await apiFetchJson(
           `${EXAM_API_BASE_URL}/${examSetId}/questions/${selectedQuestionNumber}`,
         );
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.message || "Không thể tải chi tiết câu hỏi.");
-        }
 
         if (!ignore) {
           setQuestionDetail(result.data);

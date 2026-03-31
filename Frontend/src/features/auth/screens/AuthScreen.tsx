@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,7 +13,8 @@ import {
   loginUser,
   requestPasswordOtp,
   resetPasswordUser,
-  signupUser
+  signupUser,
+  verifyOtpUser
 } from '../services/authService';
 import { ActionButton } from '../components/ActionButton';
 import { FieldRow } from '../components/FieldRow';
@@ -25,7 +26,7 @@ import type {
   RecoveryForm,
   RegisterForm
 } from '../types/auth';
-import { saveAuthTokens } from '../../../shared/storage/tokenStorage';
+import { saveAuthTokens, saveUserId, saveDisplayName } from '../../../shared/storage/tokenStorage';
 
 const INITIAL_REGISTER: RegisterForm = {
   name: '',
@@ -167,11 +168,17 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
         password: loginForm.password
       });
 
+      const displayName = extractDisplayName(response.userData);
+      const userId = extractUserId(response.userData);
+
       await saveAuthTokens(response.accessToken, response.refreshToken);
+      if (userId) await saveUserId(userId);
+      if (displayName) await saveDisplayName(displayName);
+
       setFeedback({ type: 'success', text: response.message ?? 'Đăng nhập thành công.' });
       onLoginSuccess?.({
-        displayName: extractDisplayName(response.userData),
-        userId: extractUserId(response.userData)
+        displayName,
+        userId,
       });
     });
   };
@@ -192,17 +199,24 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
     });
   };
 
-  const handleOtpContinue = () => {
+  const handleOtpContinue = async () => {
     if (!canConfirmOtp) {
       setFeedback({ type: 'error', text: 'Vui lòng nhập mã OTP bạn đã nhận được.' });
       return;
     }
 
-    setFeedback({
-      type: 'success',
-      text: 'Đã xác nhận OTP. Tiếp tục tạo mật khẩu mới.'
+    await runAction(async () => {
+      const response = await verifyOtpUser({
+        email: recoveryForm.email.trim(),
+        otpVerify: recoveryForm.otp.trim()
+      });
+
+      setFeedback({
+        type: 'success',
+        text: response.message ?? 'Đã xác nhận OTP. Tiếp tục tạo mật khẩu mới.'
+      });
+      changeScreen('reset-password', false);
     });
-    changeScreen('reset-password', false);
   };
 
   const handleResetPassword = async () => {
@@ -275,18 +289,21 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                     value={registerForm.email}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    placeholder="vd: abc@gmail.com"
                     onChangeText={(text) => updateRegister('email', text)}
                   />
                   <FieldRow
                     label="Mật khẩu"
                     value={registerForm.password}
-                    secureTextEntry
+                    isPassword
+                    placeholder="Tối thiểu 8 ký tự"
                     onChangeText={(text) => updateRegister('password', text)}
                   />
                   <FieldRow
                     label="Xác nhận"
                     value={registerForm.confirmPassword}
-                    secureTextEntry
+                    isPassword
+                    placeholder="Nhập lại mật khẩu"
                     onChangeText={(text) => updateRegister('confirmPassword', text)}
                   />
                   <View style={styles.actionGroup}>
@@ -312,12 +329,14 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                     value={loginForm.email}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    placeholder="vd: abc@gmail.com"
                     onChangeText={(text) => updateLogin('email', text)}
                   />
                   <FieldRow
                     label="Mật khẩu"
                     value={loginForm.password}
-                    secureTextEntry
+                    isPassword
+                    placeholder="Nhập mật khẩu"
                     onChangeText={(text) => updateLogin('password', text)}
                   />
                   <View style={styles.actionGroup}>
@@ -448,22 +467,24 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   heading: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#707070',
+    color: '#444444',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 10
+    paddingTop: 20,
+    paddingBottom: 16
   },
   banner: {
-    height: 32,
+    height: 12,
     backgroundColor: AUTH_ACTION_COLOR
   },
   formBlock: {
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 16,
-    backgroundColor: '#cdeaf6'
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 24,
+    backgroundColor: '#cdeaf6',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12
   },
   sectionBadge: {
     minHeight: 42,
@@ -474,10 +495,9 @@ const styles = StyleSheet.create({
     marginBottom: 18
   },
   sectionBadgeText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#111111',
-    textDecorationLine: 'underline'
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#111111'
   },
   actionGroup: {
     marginTop: 18,

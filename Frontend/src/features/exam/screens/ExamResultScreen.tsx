@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
+import { authFetch } from "../../../shared/api/authFetch";
 
 export function ExamResultScreen({ navigation, route }: any) {
   const { result: initResult, examId, sessionId, fromHistory, isPractice } = route.params;
@@ -14,7 +15,7 @@ export function ExamResultScreen({ navigation, route }: any) {
       return;
     }
 
-    fetch(`${API_BASE_URL}/exams/${examId}/sessions/${sessionId}/summary`)
+    authFetch(`${API_BASE_URL}/exams/${examId}/sessions/${sessionId}/summary`)
       .then((res) => res.json())
       .then((data) => {
         if (data.statusCode === 200) {

@@ -15,8 +15,15 @@ import {
   getPublicFlashcardSetDetail,
   importFlashcardSet
 } from '../controllers/flashcard/index.js';
+import { requireUserAuth } from '../middlewares/auth.js';
 
 const router = express.Router();
+
+// Public & Discovery endpoints
+router.get('/public', getPublicFlashcardSets);
+router.get('/public/:setId', getPublicFlashcardSetDetail);
+
+router.use(requireUserAuth);
 
 router.get('/sets', getUserFlashcardSets);
 router.post('/sets', createFlashcardSet);
@@ -30,10 +37,6 @@ router.delete('/cards/:cardId', deleteFlashcard);
 router.get('/review/due', getDueReviewCards);
 router.get('/review/stats/today', getTodayReviewStats);
 router.post('/review/:cardId/rate', rateReviewCard);
-
-// Public & Discovery endpoints
-router.get('/public', getPublicFlashcardSets);
-router.get('/public/:setId', getPublicFlashcardSetDetail);
 router.post('/public/:setId/import', importFlashcardSet);
 
 export default router;

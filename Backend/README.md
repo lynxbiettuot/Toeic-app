@@ -1,75 +1,60 @@
-# Backend README
+# Backend TOEIC App
 
-## Lưu ý khi clone code về
+> [!CAUTION]
+> **Lưu ý quan trọng (Git):** Nên tạo một nhánh phụ dưới local phân thân từ nhánh chính, sau đó pull về nhánh phụ để nếu migrate database thì nhánh chính ở local vẫn ổn. Ngoài ra cần commit cái lần chạy thành công hiện tại trước khi pull về để có thể roll back nếu có lỗi.
 
-Khi vừa clone backend về máy mới, hãy làm theo thứ tự này để tránh lỗi môi trường:
+## Các bước thiết lập ban đầu
 
-1. Cài dependency:
+### 1. Cài đặt Dependency
+**Đây là bước đầu tiên và bắt buộc.**
 ```bash
 npm install
 ```
 
-2. Tạo file `.env` từ `.env.example`:
+### 2. Cấu hình Biến môi trường (.env)
+Sao chép file `.env.example` thành `.env` và điền đầy đủ thông tin:
 ```bash
 cp .env.example .env
 ```
 
-3. Điền đủ các biến môi trường cần thiết, đặc biệt là:
-- `DATABASE_HOST`
-- `DATABASE_PORT`
-- `DATABASE_NAME`
-- `DATABASE_USER`
-- `DATABASE_PASSWORD`
-- `JWT_ACCESS_SECRET`
-- `JWT_REFRESH_SECRET`
-- `GEMINI_API_KEY` nếu muốn dùng tính năng AI
+| Biến | Ý nghĩa | Giá trị mẫu / Cách lấy |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | Chuỗi kết nối Prisma | `mysql://root:pass@localhost:3306/toeicapp` |
+| `DATABASE_HOST` | Host Database | `localhost` hoặc `127.0.0.1` |
+| `DATABASE_PORT` | Port MySQL | Mặc định: `3306` |
+| `DATABASE_USER` | Username MySQL | Mặc định: `root` |
+| `DATABASE_PASSWORD` | Mật khẩu MySQL | Mật khẩu của XAMPP/MySQL |
+| `DATABASE_NAME` | Tên Database | `toeicapp` |
+| `JWT_ACCESS_SECRET` | Khóa Access Token | Chuỗi ký tự ngẫu nhiên dài |
+| `JWT_REFRESH_SECRET` | Khóa Refresh Token | Chuỗi ký tự ngẫu nhiên khác |
+| `EMAIL_USER` | Email gửi OTP | Địa chỉ Gmail của bạn |
+| `EMAIL_PASS` | Mật khẩu ứng dụng | Lấy từ Google Account (App Password) |
+| `GEMINI_API_KEY` | Key AI Gemini | Lấy từ [Google AI Studio](https://aistudio.google.com/app/apikey) |
 
-4. Migrate database:
-```bash
-npx prisma migrate dev
+### 3. Khởi tạo Database (Prisma)
+
+> [!IMPORTANT]
+> **Migrate Database:** Bạn phải chạy lệnh này để đồng bộ cấu trúc bảng từ code vào MySQL của bạn.
+> ```bash
+> npx prisma migrate dev --name init
+> ```
+> Sau đó chạy lệnh để tạo Prisma Client:
+> ```bash
+> npx prisma generate
+> ```
+
+### 4. Tạo tài khoản Admin mặc định
+Vì hệ thống không còn dùng tài khoản admin fix cứng trong code, bạn cần chạy câu lệnh SQL sau trong **phpMyAdmin** (hoặc tool quản lý DB) để có tài khoản đăng nhập portal admin:
+
+*   **Tài khoản:** `admin@toeic.com`
+*   **Mật khẩu:** `admin123`
+
+```sql
+INSERT INTO admins (email, password_hash, full_name, role, is_active) 
+VALUES ('admin@toeic.com', '$2b$12$FO/nG/0mOp/hvbPhW0w/3.0Prvah9m0NtxhMH0UZwJnkR.kxd9joq', 'Admin', 'ADMIN', 1);
 ```
 
-5. Nếu cần đồng bộ schema nhanh trong môi trường local:
-```bash
-npx prisma db push
-```
-
-6. Chạy backend:
-```bash
-npm start
-```
-
-Lưu ý:
-- Không chạy phần Gemini nếu chưa có `GEMINI_API_KEY`.API key anh em lấy ở địa chỉ này `https://ai.google.dev/gemini-api/docs/quickstart?hl=vi#before_you_begin`
-- Nếu vừa pull code mới về mà Prisma schema thay đổi, hãy migrate lại trước khi test API.
-- Các file build `.js`, `.d.ts`, `.map` không phải source thật, không cần sửa tay.
-
-## Cách chạy nhanh
-
-### 1. Cài dependency
-```bash
-npm install
-```
-
-### 2. Tạo file môi trường
-```bash
-cp .env.example .env
-```
-
-Sau đó cập nhật lại các biến trong `.env` cho đúng với máy local của bạn.
-
-### 3. Migrate database
-```bash
-npx prisma migrate dev
-```
-
-Nếu chỉ cần đồng bộ schema và generate Prisma Client nhanh từ database hiện có, có thể dùng:
-
-```bash
-npx prisma db push
-```
-
-### 4. Chạy server
+### 5. Chạy Backend
 ```bash
 npm start
 ```

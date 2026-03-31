@@ -4,7 +4,7 @@
  */
 
 import type { ReviewFlashcard, ReviewRating, ReviewTodayStats } from '../types';
-import { buildUrl, parseJson } from './api-client';
+import { authFetch, buildUrl, parseJson } from './api-client';
 
 export interface GetDueReviewCardsResponse {
   cards: ReviewFlashcard[];
@@ -38,7 +38,7 @@ const normalizeReviewCard = (card: any): ReviewFlashcard => ({
 });
 
 export const getDueReviewCards = async (userId: number): Promise<GetDueReviewCardsResponse> => {
-  const response = await fetch(buildUrl(`/flashcards/review/due?userId=${userId}`));
+  const response = await authFetch(buildUrl(`/flashcards/review/due?userId=${userId}`));
   const json = (await response.json()) as { data?: GetDueReviewCardsResponse; message?: string };
 
   if (!response.ok) {
@@ -60,7 +60,7 @@ export const rateReviewCard = async (
   userId: number,
   rating: ReviewRating
 ): Promise<RateReviewCardResponse> => {
-  const response = await fetch(buildUrl(`/flashcards/review/${cardId}/rate`), {
+  const response = await authFetch(buildUrl(`/flashcards/review/${cardId}/rate`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, rating })
@@ -70,7 +70,7 @@ export const rateReviewCard = async (
 };
 
 export const getTodayReviewStats = async (userId: number): Promise<ReviewTodayStats> => {
-  const response = await fetch(buildUrl(`/flashcards/review/stats/today?userId=${userId}`));
+  const response = await authFetch(buildUrl(`/flashcards/review/stats/today?userId=${userId}`));
   return parseJson<ReviewTodayStats>(response);
 };
 
@@ -79,7 +79,7 @@ export const getTodayReviewStats = async (userId: number): Promise<ReviewTodaySt
  */
 export const getAllUserFlashcards = async (userId: number): Promise<ReviewFlashcard[]> => {
   try {
-    const setResponse = await fetch(buildUrl(`/flashcards/sets?userId=${userId}`));
+    const setResponse = await authFetch(buildUrl(`/flashcards/sets?userId=${userId}`));
     const setJson = (await setResponse.json()) as { data?: { id: number; title: string }[] };
 
     if (!setResponse.ok || !setJson.data) {
@@ -89,7 +89,7 @@ export const getAllUserFlashcards = async (userId: number): Promise<ReviewFlashc
     const allCards: ReviewFlashcard[] = [];
 
     for (const set of setJson.data) {
-      const cardResponse = await fetch(buildUrl(`/flashcards/sets/${set.id}/cards?userId=${userId}`));
+      const cardResponse = await authFetch(buildUrl(`/flashcards/sets/${set.id}/cards?userId=${userId}`));
       const cardJson = (await cardResponse.json()) as {
         data?: { cards: any[] };
       };
@@ -122,3 +122,4 @@ export const getAllUserFlashcards = async (userId: number): Promise<ReviewFlashc
     throw new Error(error instanceof Error ? error.message : 'Failed to load all flashcards');
   }
 };
+

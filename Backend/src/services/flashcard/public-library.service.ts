@@ -15,15 +15,16 @@ export interface PublicSetData {
   savedCount: number;
 }
 
-export const getPublicFlashcardSets = async (page: number, limit: number, search: string) => {
+export const getPublicFlashcardSets = async (page: number, limit: number, search: string, currentUserId?: number) => {
   const skip = (page - 1) * limit;
-
-  const whereClause: Record<string, unknown> = {
+  const whereClause: any = {
     visibility: 'PUBLIC',
-    status: 'PUBLISHED',
-    warned_at: null,
     deleted_at: null
   };
+
+  if (currentUserId) {
+    whereClause.user = { id: { not: currentUserId } };
+  }
 
   if (search) {
     whereClause.title = { contains: search };
@@ -69,17 +70,17 @@ export const getPublicFlashcardSets = async (page: number, limit: number, search
 };
 
 export const getPublicFlashcardSetDetail = async (setId: number) => {
-  const set = await prisma.flashcard_sets.findUnique({
-    where: { id: setId },
+  const set = await prisma.flashcard_sets.findFirst({
+    where: { 
+      id: setId,
+      visibility: 'PUBLIC',
+      deleted_at: null
+    },
     select: {
       id: true,
       title: true,
       description: true,
       card_count: true,
-      visibility: true,
-      status: true,
-      warned_at: true,
-      deleted_at: true,
       user: { select: { id: true, full_name: true } },
       flashcards: {
         select: {
@@ -97,10 +98,6 @@ export const getPublicFlashcardSetDetail = async (setId: number) => {
 
   if (!set) {
     throw new Error('404: Set not found');
-  }
-
-  if (set.visibility !== 'PUBLIC' || set.status !== 'PUBLISHED' || set.warned_at !== null || set.deleted_at !== null) {
-    throw new Error('403: Set is not public');
   }
 
   const setData: PublicSetData = {
@@ -130,26 +127,14 @@ export const importFlashcardSet = async (sourceSetId: number, userId: number) =>
     throw new Error('404: Source set not found');
   }
 
-  if (
-    sourceSet.visibility !== 'PUBLIC' ||
-    sourceSet.status !== 'PUBLISHED' ||
-    sourceSet.warned_at !== null ||
-    sourceSet.deleted_at !== null
-  ) {
-    throw new Error('403: Only PUBLIC sets can be imported');
-  }
-
   // Create new set for user
   const newSet = await prisma.flashcard_sets.create({
     data: {
-      owner_user_id: userId,
+      user: { connect: { id: userId } },
       title: sourceSet.title,
       description: sourceSet.description,
       cover_image_url: sourceSet.cover_image_url,
-      visibility: 'PRIVATE',
-      card_count: sourceSet.flashcards.length,
-      imported_from_set_id: sourceSetId,
-      original_owner_id: sourceSet.owner_user_id
+      card_count: sourceSet.flashcards.length
     }
   });
 

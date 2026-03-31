@@ -8,12 +8,14 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { API_BASE_URL } from "../../../config/api";
 import { AUTH_ACTION_COLOR } from "../../auth/constants/theme";
+import { authFetch } from "../../../shared/api/authFetch";
 
 export function ExamIntroScreen({ navigation, route }: any) {
-  const { examId, completed: initCompleted, sessionId: initSessionId, userId = 1 } = route.params;
+  const { examId, completed: initCompleted, sessionId: initSessionId, userId } = route.params;
   const [exam, setExam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -33,10 +35,10 @@ export function ExamIntroScreen({ navigation, route }: any) {
   const handleStartExam = async () => {
     setStarting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/exams/${examId}/sessions`, {
+      const res = await authFetch(`${API_BASE_URL}/exams/${examId}/sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({}),
       });
       const data = await res.json();
 
@@ -47,7 +49,7 @@ export function ExamIntroScreen({ navigation, route }: any) {
           duration: exam.duration_minutes,
         });
       } else {
-        Alert.alert("Lỗi", "Không thể bắt đầu phiên thi.");
+        Alert.alert("Lỗi", data.message || "Không thể bắt đầu phiên thi.");
       }
     } catch (err) {
       console.error(err);
@@ -96,107 +98,109 @@ export function ExamIntroScreen({ navigation, route }: any) {
   const isCompleted = !!initCompleted && !!initSessionId;
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Thông tin đề thi</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Completed badge */}
-        {isCompleted && (
-          <View style={styles.completedBanner}>
-            <Ionicons name="checkmark-circle" size={20} color="#27ae60" />
-            <Text style={styles.completedBannerText}>Bạn đã hoàn thành đề thi này</Text>
-          </View>
-        )}
-
-        <Text style={styles.title}>{exam.title}</Text>
-
-        {/* Info box */}
-        <View style={styles.infoBox}>
-          <View style={styles.infoRow}>
-            <Ionicons name="help-circle-outline" size={20} color="#666" />
-            <Text style={styles.infoText}>Số câu: {exam.total_questions}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="time-outline" size={20} color="#666" />
-            <Text style={styles.infoText}>Thời gian: {exam.duration_minutes} phút</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={20} color="#666" />
-            <Text style={styles.infoText}>Năm xuất bản: {exam.year || "-"}</Text>
-          </View>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#111" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Thông tin đề thi</Text>
+          <View style={{ width: 24 }} />
         </View>
 
-        <View style={styles.spacer} />
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* Completed badge */}
+          {isCompleted && (
+            <View style={styles.completedBanner}>
+              <Ionicons name="checkmark-circle" size={20} color="#27ae60" />
+              <Text style={styles.completedBannerText}>Bạn đã hoàn thành đề thi này</Text>
+            </View>
+          )}
 
-        {/* Action buttons */}
-        {isCompleted ? (
-          <>
-            {/* View result */}
-            <TouchableOpacity
-              style={[styles.button, styles.resultBtn]}
-              onPress={handleViewResult}
-            >
-              <Ionicons name="bar-chart-outline" size={20} color={AUTH_ACTION_COLOR} />
-              <Text style={styles.resultBtnText}>Xem chi tiết kết quả</Text>
-            </TouchableOpacity>
+          <Text style={styles.title}>{exam.title}</Text>
 
-            {/* Retake */}
+          {/* Info box */}
+          <View style={styles.infoBox}>
+            <View style={styles.infoRow}>
+              <Ionicons name="help-circle-outline" size={20} color="#666" />
+              <Text style={styles.infoText}>Số câu: {exam.total_questions}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="time-outline" size={20} color="#666" />
+              <Text style={styles.infoText}>Thời gian: {exam.duration_minutes} phút</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar-outline" size={20} color="#666" />
+              <Text style={styles.infoText}>Năm xuất bản: {exam.year || "-"}</Text>
+            </View>
+          </View>
+
+          <View style={styles.spacer} />
+
+          {/* Action buttons */}
+          {isCompleted ? (
+            <>
+              {/* View result */}
+              <TouchableOpacity
+                style={[styles.button, styles.resultBtn]}
+                onPress={handleViewResult}
+              >
+                <Ionicons name="bar-chart-outline" size={20} color={AUTH_ACTION_COLOR} />
+                <Text style={styles.resultBtnText}>Xem chi tiết kết quả</Text>
+              </TouchableOpacity>
+
+              {/* Retake */}
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleRetakeExam}
+                disabled={starting}
+              >
+                {starting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="refresh-outline" size={20} color="#fff" />
+                    <Text style={styles.buttonText}>Làm lại</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            /* Start exam (first time) */
             <TouchableOpacity
               style={styles.button}
-              onPress={handleRetakeExam}
+              onPress={handleStartExam}
               disabled={starting}
             >
               {starting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <>
-                  <Ionicons name="refresh-outline" size={20} color="#fff" />
-                  <Text style={styles.buttonText}>Làm lại</Text>
-                </>
+                <Text style={styles.buttonText}>Bắt đầu làm bài</Text>
               )}
             </TouchableOpacity>
-          </>
-        ) : (
-          /* Start exam (first time) */
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleStartExam}
-            disabled={starting}
-          >
-            {starting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Bắt đầu làm bài</Text>
-            )}
-          </TouchableOpacity>
-        )}
-      </ScrollView>
-    </View>
+          )}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7f7" },
+  container: { flex: 1, backgroundColor: "#ffffff" },
+  safeArea: { flex: 1, backgroundColor: AUTH_ACTION_COLOR },
   center: { justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: "#fff",
+    paddingVertical: 16,
+    backgroundColor: AUTH_ACTION_COLOR,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: "rgba(0,0,0,0.08)",
   },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#111" },
   content: {
     padding: 24,
     flexGrow: 1,

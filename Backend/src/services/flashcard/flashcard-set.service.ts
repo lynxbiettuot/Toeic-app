@@ -9,8 +9,7 @@ import { ensureOwnership } from '../../utils/flashcard/index.js';
 export const getUserFlashcardSets = async (userId: number) => {
   return prisma.flashcard_sets.findMany({
     where: {
-      owner_user_id: userId,
-      deleted_at: null
+      user: { id: userId }
     },
     orderBy: { created_at: 'desc' }
   });
@@ -24,13 +23,12 @@ export const createFlashcardSet = async (
 ) => {
   return prisma.flashcard_sets.create({
     data: {
-      owner_user_id: userId,
+      user: { connect: { id: userId } },
       title,
       description,
       visibility,
-      status: visibility === 'PUBLIC' ? 'PUBLISHED' : 'HIDDEN',
-      warned_at: null,
-      deleted_at: null
+      status: 'DRAFT',
+      is_system: false,
     }
   });
 };
@@ -48,8 +46,8 @@ export const updateFlashcardSet = async (
     throw new Error(`${error.statusCode}: ${error.message}`);
   }
 
-  // Warned sets are forced private until admin changes them.
-  const effectiveVisibility = set?.warned_at ? 'PRIVATE' : visibility;
+  // Warned sets logic disabled as column is missing from DB
+  const effectiveVisibility = visibility;
 
   return prisma.flashcard_sets.update({
     where: { id: setId },
@@ -57,7 +55,6 @@ export const updateFlashcardSet = async (
       title,
       description,
       visibility: effectiveVisibility,
-      status: effectiveVisibility === 'PUBLIC' ? 'PUBLISHED' : 'HIDDEN',
       updated_at: new Date()
     }
   });
@@ -102,11 +99,13 @@ export const deleteFlashcardSet = async (setId: number, userId: number) => {
       where: { set_id: setId }
     });
 
-    // Keep imported clones, but remove their link to the deleted source set.
+    // Keep imported clones (logic hidden as imported_from_set_id is missing from DB)
+    /*
     await tx.flashcard_sets.updateMany({
       where: { imported_from_set_id: setId },
       data: { imported_from_set_id: null }
     });
+    */
 
     await tx.flashcards.deleteMany({
       where: { set_id: setId }

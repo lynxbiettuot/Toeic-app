@@ -56,9 +56,7 @@ export const getSystemVocabSets = async (req: Request, res: Response) => {
           owner_user_id: {
             not: null,
           },
-          warned_at: {
-            not: null,
-          },
+          visibility: "PUBLIC",
         },
       ],
     };
@@ -97,7 +95,6 @@ export const getSystemVocabSets = async (req: Request, res: Response) => {
         is_system: true,
         owner_user_id: true,
         owner_admin_id: true,
-        warned_at: true,
         created_at: true,
         deleted_at: true,
         user: {
@@ -131,7 +128,7 @@ export const getSystemVocabSets = async (req: Request, res: Response) => {
         ownerType,
         ownerId: set.owner_user_id ?? set.owner_admin_id,
         ownerName,
-        warnedAt: set.warned_at,
+        warnedAt: null,
         created_at: set.created_at,
         deleted_at: set.deleted_at,
       };
@@ -179,9 +176,7 @@ export const getSystemVocabSetDetail = async (req: Request, res: Response) => {
             owner_user_id: {
               not: null,
             },
-            warned_at: {
-              not: null,
-            },
+            visibility: "PUBLIC",
           },
         ],
       },
@@ -191,8 +186,11 @@ export const getSystemVocabSetDetail = async (req: Request, res: Response) => {
         description: true,
         cover_image_url: true,
         status: true,
+        visibility: true,
+        is_system: true,
         card_count: true,
         created_at: true,
+        deleted_at: true,
         flashcards: {
           orderBy: {
             id: "asc",
@@ -485,7 +483,6 @@ export const updateSystemVocabSet = async (req: Request, res: Response) => {
       select: {
         id: true,
         owner_user_id: true,
-        is_system: true,
       },
     });
 
@@ -627,14 +624,8 @@ export const updateSystemVocabSetStatus = async (req: Request, res: Response) =>
 
     const isUserSet = !!targetSet.owner_user_id;
 
-    const updateData: {
-      status: string;
-      deleted_at: null;
-      visibility?: "PUBLIC" | "PRIVATE";
-      warned_at?: null;
-    } = {
+    const updateData: any = {
       status,
-      deleted_at: null,
     };
 
     if (isUserSet) {
@@ -643,8 +634,8 @@ export const updateSystemVocabSetStatus = async (req: Request, res: Response) =>
       } else {
         updateData.visibility = "PRIVATE";
       }
-      // Any manual status change by admin clears warning flag.
-      updateData.warned_at = null;
+      // warned_at is missing from DB
+      // updateData.warned_at = null;
     }
 
     const updated = await prisma.flashcard_sets.update({
@@ -737,7 +728,7 @@ export const warnUserVocabSet = async (req: Request, res: Response) => {
     await prisma.flashcard_sets.update({
       where: { id: setId },
       data: {
-        warned_at: now,
+        // warned_at: now, // missing from DB
         // Keep warned sets visible on admin side while hiding from user public discovery.
         visibility: "PRIVATE",
         status: "HIDDEN",

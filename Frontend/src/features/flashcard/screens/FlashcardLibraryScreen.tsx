@@ -19,7 +19,7 @@ import {
   getFlashcardSets,
   updateFlashcardSet
 } from '../services';
-import { FlashcardFooterNav } from '../components/FlashcardFooterNav';
+import { BottomNavbar, NavScreen } from '../../../shared/components/BottomNavbar';
 import { DiscoveryScreen } from './DiscoveryScreen';
 import type { FlashcardSet, PublicFlashcardSet, VisibilityMode } from '../types';
 
@@ -30,6 +30,8 @@ type FlashcardLibraryScreenProps = {
   onOpenSet: (setItem: FlashcardSet) => void;
   onOpenPublicSet: (setItem: PublicFlashcardSet) => void;
   onGoHome: () => void;
+  onNavigate: (screen: NavScreen) => void;
+  onLogout: () => void;
 };
 
 type SetFormState = {
@@ -50,7 +52,9 @@ export function FlashcardLibraryScreen({
   onBack,
   onOpenSet,
   onOpenPublicSet,
-  onGoHome
+  onGoHome,
+  onNavigate,
+  onLogout
 }: FlashcardLibraryScreenProps) {
   const [sets, setSets] = useState<FlashcardSet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,7 +169,7 @@ export function FlashcardLibraryScreen({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
         <View style={styles.topBar}>
           <Pressable onPress={onBack} style={styles.iconButton}>
@@ -318,14 +322,18 @@ export function FlashcardLibraryScreen({
           </View>
         </Modal>
 
-        <FlashcardFooterNav onGoHome={onGoHome} />
+        <BottomNavbar 
+          activeScreen="flashcard-library" 
+          onNavigate={onNavigate} 
+          onLogout={onLogout} 
+        />
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f5f7f7' },
+  safeArea: { flex: 1, backgroundColor: AUTH_ACTION_COLOR },
   container: { flex: 1, backgroundColor: '#fff' },
   topBar: {
     height: 56,

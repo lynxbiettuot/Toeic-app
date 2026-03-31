@@ -1,79 +1,78 @@
-# Frontend README
+# Frontend TOEIC Mobile
 
-## Cách chạy nhanh
+> [!CAUTION]
+> **Lưu ý quan trọng (Git):** Nên tạo một nhánh phụ dưới local phân thân từ nhánh chính, sau đó pull về nhánh phụ để nếu migrate database thì nhánh chính ở local vẫn ổn. Ngoài ra cần commit cái lần chạy thành công hiện tại trước khi pull về để có thể roll back nếu có lỗi.
 
-### Đây là frontend của mobile
-Project `Frontend` là phần giao diện cho ứng dụng TOEIC trên điện thoại, được xây dựng bằng `Expo + React Native`.
+## Các bước thiết lập ban đầu
 
-Bạn có thể chạy app theo 2 cách:
-- dùng `Expo Go` trên điện thoại thật
-- dùng máy ảo Android Studio
-
-Trong project này, cách nhẹ và dễ nhất là dùng `Expo Go`, không bắt buộc phải cài máy ảo Android Studio.
-
-### 1. Cài dependency
+### 1. Cài đặt Dependency
+**Đây là bước đầu tiên và bắt buộc.**
 ```bash
 npm install
 ```
 
-### 2. Tạo file môi trường
+### 2. Cấu hình Biến môi trường (.env)
+Sao chép file `.env.example` thành `.env` và điền đầy đủ thông tin:
 ```bash
 cp .env.example .env
 ```
 
-Nếu đang dùng Windows PowerShell, có thể dùng:
+| Biến | Ý nghĩa | Cách cấu hình |
+| :--- | :--- | :--- |
+| `API_BASE_URL` | Địa chỉ Backend | 
+**Máy ảo (Android Studio):** `http://10.0.2.2:3000`
+**Máy thật (Expo Go):** `http://IP_LAN:3000` |
+| `API_PORT` | Port Backend | Mặc định: `3000` |
+| `EXPO_PUBLIC_CLOUDINARY_URL` | Cloudinary API | 
+`https://api.cloudinary.com/v1_1/YOUR_NAME/image/upload` |
+| `EXPO_PUBLIC_UPLOAD_PRESET` | Upload Preset | Lấy trong Settings Cloudinary (Unsigned) |
 
-```powershell
-Copy-Item .env.example .env
-```
+### 3. Hướng dẫn lấy IP LAN (Cho máy thật)
+Nếu bạn chạy ứng dụng trên điện thoại thật bằng Expo Go, bạn cần dùng IP LAN của máy tính:
+1. Mở PowerShell/Command Prompt gõ: `ipconfig`.
+2. Tìm dòng `IPv4 Address` (ví dụ `192.168.1.5`).
+3. Điền vào `.env`: `API_BASE_URL=http://192.168.1.5:3000`.
 
-### 3. Cấu hình backend để điện thoại thấy được Giao diện
-Frontend mobile muốn gọi được backend trên điện thoại thì điện thoại phải truy cập được địa chỉ IP LAN của máy tính đang chạy backend.
+### 4. Cấu hình Cloudinary (Để đổi ảnh đại diện)
+1. Đăng ký [Cloudinary](https://cloudinary.com/).
+2. Lấy **Cloud Name** tại Dashboard.
+3. Vào **Settings -> Upload -> Add upload preset**.
+4. Chuyển **Signing Mode** sang **`Unsigned`**. Nhấn **Save**.
+5. Copy tên Preset vừa tạo và dán vào `EXPO_PUBLIC_UPLOAD_PRESET`.
 
-#### Cách cấu hình
-1. Chạy backend trước ở cổng `3000`.
-2. Đảm bảo điện thoại và máy tính cùng một mạng Wi-Fi.
-3. Lấy IP LAN của máy tính:
+### 5. Khởi chạy Ứng dụng
 
-```powershell
-ipconfig
-```
+Bạn có 2 câu lệnh chính để khởi chạy:
 
-4. Tìm dòng `IPv4 Address`, ví dụ `192.168.2.114`.
-5. Mở file `.env` của frontend và sửa thành:
+*   **Chạy thông thường:**
+    ```bash
+    npm start
+    ```
+*   **Chạy xóa Cache (Khuyên dùng khi sửa .env):**
+    ```bash
+    npx expo start -c
+    ```
+    *Lưu ý: Dùng `-c` (clear) để ép Expo đọc lại các thay đổi mới nhất từ file `.env` hoặc khi cấu hình không nhận.*
 
-```env
-API_BASE_URL=http:192.168.2.114:3000
-API_PORT=3000
-```
+---
 
-Lưu ý:
-- Thay `192.168.2.114` bằng IP thật của máy bạn.
-- Không dùng `localhost` hoặc `127.0.0.1` khi chạy trên điện thoại thật, vì lúc đó app sẽ hiểu là chính điện thoại.
-- Nếu backend đổi cổng, cập nhật lại cả `API_BASE_URL` và `API_PORT`.
+## Hướng dẫn xử lý khi bị "Treo" (Troubleshooting)
 
-### 4. Cài Expo Go trên điện thoại
-Tải ứng dụng `Expo Go`:
-- Android: cài từ Google Play
-- iPhone: cài từ App Store
+Nếu bạn quét mã QR hoặc mở máy ảo mà bị treo ở màn hình **"Reloading..."** hoặc **"Network request failed"**, hãy thử các bước sau:
 
-### 5. Chạy frontend
-```bash
-npm start
-```
+1.  **Nhấn phím `r`:** Tại cửa sổ Terminal đang chạy Expo, nhấn phím `r` để ép ứng dụng nạp lại mã nguồn.(thông thường treo là do còn cache cũ nên cứ chạy npx expo start -c là được, nếu không mới xuống dưới)
+2.  **Kiểm tra Tường lửa (Firewall):** Tắt tạm Windows Firewall vì nó có thể chặn cổng `8081` (của Expo) hoặc `3000` (của Backend).
+3.  **Dùng chế độ Tunnel (Cực kỳ hiệu quả khi mạng yếu/lỗi IP):**
+    Nếu lỗi IP LAN vẫn tiếp diễn, hãy dùng lệnh:
+    ```bash
+    npx expo start --tunnel
+    ```
+    Cách này sẽ tạo một đường ống bảo mật chạy qua internet, bỏ qua mọi rắc rối về mạng nội bộ.
 
-Sau khi chạy, Expo sẽ mở `Metro Bundler` và hiển thị mã QR trong terminal hoặc trên trang Expo Dev Tools.
+---
 
-### 6. Mở app trên Expo Go
-1. Mở `Expo Go` trên điện thoại.
-2. Quét QR code từ terminal hoặc trình duyệt.
-3. App sẽ được load trực tiếp trên điện thoại.
-
-Nếu quét QR nhưng không vào được app:
-- kiểm tra điện thoại và máy tính có cùng Wi-Fi không
-- kiểm tra backend có đang chạy không
-- kiểm tra `API_BASE_URL` đã đúng IP LAN chưa
-- kiểm tra tường lửa Windows có đang chặn cổng `3000` hoặc Expo không
+- Nhấn **`a`** để mở trên **Máy ảo (Android Studio)**.
+- Quét mã QR bằng ứng dụng **Expo Go** trên điện thoại để chạy **Máy thật**.
 
 ## Cách để thấy frontend trên Expo Go
 

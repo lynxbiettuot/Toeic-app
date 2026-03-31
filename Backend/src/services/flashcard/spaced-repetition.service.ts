@@ -31,8 +31,7 @@ export const getDueReviewCards = async (userId: number) => {
   const dbCards = await prisma.flashcards.findMany({
     where: {
       set: {
-        owner_user_id: userId,
-        deleted_at: null
+        user: { id: userId }
       },
       OR: [
         {

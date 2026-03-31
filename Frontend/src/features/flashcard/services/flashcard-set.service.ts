@@ -4,10 +4,10 @@
  */
 
 import type { FlashcardSet, VisibilityMode } from '../types';
-import { buildUrl, parseJson } from './api-client';
+import { authFetch, buildUrl, parseJson } from './api-client';
 
 export const getFlashcardSets = async (userId: number): Promise<FlashcardSet[]> => {
-  const response = await fetch(buildUrl(`/flashcards/sets?userId=${userId}`));
+  const response = await authFetch(buildUrl(`/flashcards/sets?userId=${userId}`));
   return parseJson<FlashcardSet[]>(response);
 };
 
@@ -15,7 +15,7 @@ export const createFlashcardSet = async (
   userId: number,
   payload: { title: string; description: string; visibility: VisibilityMode }
 ): Promise<FlashcardSet> => {
-  const response = await fetch(buildUrl('/flashcards/sets'), {
+  const response = await authFetch(buildUrl('/flashcards/sets'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, ...payload })
@@ -29,7 +29,7 @@ export const updateFlashcardSet = async (
   userId: number,
   payload: { title: string; description: string; visibility: VisibilityMode }
 ): Promise<FlashcardSet> => {
-  const response = await fetch(buildUrl(`/flashcards/sets/${setId}`), {
+  const response = await authFetch(buildUrl(`/flashcards/sets/${setId}`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, ...payload })
@@ -39,7 +39,7 @@ export const updateFlashcardSet = async (
 };
 
 export const deleteFlashcardSet = async (setId: number, userId: number): Promise<void> => {
-  const response = await fetch(buildUrl(`/flashcards/sets/${setId}?userId=${userId}`), {
+  const response = await authFetch(buildUrl(`/flashcards/sets/${setId}?userId=${userId}`), {
     method: 'DELETE'
   });
 
@@ -48,3 +48,4 @@ export const deleteFlashcardSet = async (setId: number, userId: number): Promise
     throw new Error(json.message || 'Delete failed');
   }
 };
+
