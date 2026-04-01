@@ -307,7 +307,8 @@ export class TestSessionService {
         exam_year: exam.year,
         wrong_count: 0,
         wrong_questions: [],
-        submitted_at: ua.answered_at
+        submitted_at: ua.answered_at,
+        session_id: ua.session_id
       };
 
       existing.wrong_count++;

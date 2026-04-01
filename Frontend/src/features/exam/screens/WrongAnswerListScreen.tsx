@@ -25,6 +25,7 @@ export function WrongAnswerListScreen({ navigation, route }: any) {
   const { examId, examTitle, sessionId, wrongQuestions: initialWrongQuestions = [], userId } = route.params;
   const [retaking, setRetaking] = useState(false);
   const [localWrongQuestions, setLocalWrongQuestions] = useState<WrongQuestion[]>(initialWrongQuestions);
+  const [localSessionId, setLocalSessionId] = useState<number | undefined>(sessionId);
   const [loading, setLoading] = useState(false);
 
   // Tải dữ liệu mới nhất từ server
@@ -38,6 +39,9 @@ export function WrongAnswerListScreen({ navigation, route }: any) {
         const currentGroup = data.data.find((g: any) => g.exam_id === examId);
         if (currentGroup) {
           setLocalWrongQuestions(currentGroup.wrong_questions || []);
+          if (currentGroup.session_id) {
+            setLocalSessionId(currentGroup.session_id);
+          }
         } else {
           // Nếu không tìm thấy (có thể đã làm đúng hết), set về rỗng
           setLocalWrongQuestions([]);
@@ -102,7 +106,7 @@ export function WrongAnswerListScreen({ navigation, route }: any) {
   const handleViewQuestion = (q: WrongQuestion) => {
     navigation.navigate("ExamQuestionDetailScreen", {
       examId,
-      sessionId,
+      sessionId: localSessionId,
       questionId: q.question_id,
       partNumber: q.part_number,
     });
