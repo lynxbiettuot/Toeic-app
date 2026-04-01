@@ -3,8 +3,6 @@ import React from 'react';
 export function ManualCreateForm({ 
   title, setTitle, 
   description, setDescription, 
-  cardDraft, setCardDraft, 
-  cards, onAddCard, onRemoveCard, 
   onSave 
 }) {
   return (
@@ -22,84 +20,15 @@ export function ManualCreateForm({
         onChange={(event) => setDescription(event.target.value)}
       />
 
-      <p className="detail-label">Thêm flashcard</p>
-      <input
-        className="import-input"
-        placeholder="Từ vựng"
-        value={cardDraft.word}
-        onChange={(event) =>
-          setCardDraft((current) => ({ ...current, word: event.target.value }))
-        }
-      />
-      <input
-        className="import-input"
-        placeholder="Định nghĩa"
-        value={cardDraft.definition}
-        onChange={(event) =>
-          setCardDraft((current) => ({ ...current, definition: event.target.value }))
-        }
-      />
-      <input
-        className="import-input"
-        placeholder="Loại từ (noun, verb...)"
-        value={cardDraft.word_type}
-        onChange={(event) =>
-          setCardDraft((current) => ({ ...current, word_type: event.target.value }))
-        }
-      />
-      <input
-        className="import-input"
-        placeholder="Phiên âm"
-        value={cardDraft.pronunciation}
-        onChange={(event) =>
-          setCardDraft((current) => ({ ...current, pronunciation: event.target.value }))
-        }
-      />
-      <textarea
-        className="import-input import-textarea"
-        placeholder="Ví dụ"
-        value={cardDraft.example}
-        onChange={(event) =>
-          setCardDraft((current) => ({ ...current, example: event.target.value }))
-        }
-      />
-      <input
-        className="import-input"
-        placeholder="URL ảnh"
-        value={cardDraft.image_url}
-        onChange={(event) =>
-          setCardDraft((current) => ({ ...current, image_url: event.target.value }))
-        }
-      />
-
       <div className="import-actions">
-        <button className="import-button import-button-secondary" type="button" onClick={onAddCard}>
-          Thêm thẻ
-        </button>
         <button className="import-button import-button-primary" type="button" onClick={onSave}>
-          Lưu bộ Private
+          Tạo bộ & Lưu Private
         </button>
       </div>
 
-      {cards.length > 0 && (
-        <div className="preview-box">
-          <p className="detail-label">Danh sách thẻ nháp</p>
-          <div className="action-grid">
-            {cards.map((card) => (
-              <div className="action-chip" key={card.id}>
-                <span>
-                  <strong>{card.word}</strong>: {card.definition}
-                </span>
-                <button className="table-inline-button danger" type="button" onClick={() => onRemoveCard(card.id)}>
-                  Xóa thẻ
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <p className="mock-url">Đã nhập: {cards.length} flashcard</p>
+      <p className="mock-url" style={{ marginTop: '20px', color: '#666' }}>
+        * Sau khi tạo, bạn có thể vào phần "Xem chi tiết" để thêm từng thẻ từ vựng.
+      </p>
     </div>
   );
 }

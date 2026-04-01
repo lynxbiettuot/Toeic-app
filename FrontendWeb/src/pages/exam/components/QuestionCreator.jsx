@@ -86,7 +86,7 @@ export function QuestionCreator({
           className="import-input"
           placeholder="Nội dung đáp án A"
           value={createDraft.answerA}
-          disabled={[1, 2, 3, 4].includes(partNumber)}
+          disabled={[1, 2].includes(partNumber)}
           onChange={(event) =>
             setCreateDraft((current) => ({ ...current, answerA: event.target.value }))
           }
@@ -99,7 +99,7 @@ export function QuestionCreator({
           className="import-input"
           placeholder="Nội dung đáp án B"
           value={createDraft.answerB}
-          disabled={[1, 2, 3, 4].includes(partNumber)}
+          disabled={[1, 2].includes(partNumber)}
           onChange={(event) =>
             setCreateDraft((current) => ({ ...current, answerB: event.target.value }))
           }
@@ -112,7 +112,7 @@ export function QuestionCreator({
           className="import-input"
           placeholder="Nội dung đáp án C"
           value={createDraft.answerC}
-          disabled={[1, 2, 3, 4].includes(partNumber)}
+          disabled={[1, 2].includes(partNumber)}
           onChange={(event) =>
             setCreateDraft((current) => ({ ...current, answerC: event.target.value }))
           }
@@ -125,7 +125,7 @@ export function QuestionCreator({
           className="import-input"
           placeholder="Nội dung đáp án D"
           value={createDraft.answerD}
-          disabled={[1, 2, 3, 4].includes(partNumber)}
+          disabled={[1, 2].includes(partNumber)}
           onChange={(event) =>
             setCreateDraft((current) => ({ ...current, answerD: event.target.value }))
           }

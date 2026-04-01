@@ -17,7 +17,8 @@ export function VocabDetailModal({
   onRemoveCard,
   onSaveSet,
   saving,
-  detailSearch, setDetailSearch
+  detailSearch, setDetailSearch,
+  detailCards
 }) {
   return (
     <div className="import-form-card">

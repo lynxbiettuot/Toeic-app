@@ -176,16 +176,26 @@ export function ExamDetailPage() {
       return;
     }
 
-    if (!createDraft.answerA.trim() || !createDraft.answerB.trim() || !createDraft.answerC.trim() || !createDraft.answerD.trim()) {
-      setCreateMessage("Vui lòng nhập đủ đáp án A, B, C, D.");
-      return;
+    const needsAnswersText = ![1, 2].includes(partNumber);
+    if (needsAnswersText) {
+      if (!createDraft.answerA.trim() || !createDraft.answerB.trim() || !createDraft.answerC.trim() || !createDraft.answerD.trim()) {
+        setCreateMessage("Vui lòng nhập đủ đáp án A, B, C, D.");
+        return;
+      }
     }
+
+    const currentQuestions = exam?.questions || [];
+    const maxNumber = currentQuestions.length > 0 
+      ? Math.max(...currentQuestions.map(q => q.question_number)) 
+      : 0;
+    const nextQuestionNumber = maxNumber + 1;
 
     try {
       setCreatingQuestion(true);
       setCreateMessage("");
 
       const payload = {
+        question_number: nextQuestionNumber,
         part_number: partNumber,
         content: createDraft.content,
         image_url: createDraft.image_url,

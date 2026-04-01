@@ -88,7 +88,10 @@ export const getPublicFlashcardSetDetail = async (setId: number) => {
   const set = await prisma.flashcard_sets.findFirst({
     where: { 
       id: setId,
-      visibility: 'PUBLIC',
+      OR: [
+        { visibility: 'PUBLIC' },
+        { owner_user_id: null, status: 'PUBLISHED' }
+      ],
       deleted_at: null
     },
     select: {

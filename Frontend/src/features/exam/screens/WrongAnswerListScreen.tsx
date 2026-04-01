@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -22,13 +22,45 @@ type WrongQuestion = {
 };
 
 export function WrongAnswerListScreen({ navigation, route }: any) {
-  const { examId, examTitle, sessionId, wrongQuestions = [], userId } = route.params;
+  const { examId, examTitle, sessionId, wrongQuestions: initialWrongQuestions = [], userId } = route.params;
   const [retaking, setRetaking] = useState(false);
+  const [localWrongQuestions, setLocalWrongQuestions] = useState<WrongQuestion[]>(initialWrongQuestions);
+  const [loading, setLoading] = useState(false);
+
+  // Tải dữ liệu mới nhất từ server
+  const fetchLatestData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await authFetch(`${API_BASE_URL}/exams/wrong-answers`);
+      const data = await res.json();
+      if (data.statusCode === 200 && Array.isArray(data.data)) {
+        // Tìm đúng bộ đề hiện tại trong danh sách lịch sử sai sót
+        const currentGroup = data.data.find((g: any) => g.exam_id === examId);
+        if (currentGroup) {
+          setLocalWrongQuestions(currentGroup.wrong_questions || []);
+        } else {
+          // Nếu không tìm thấy (có thể đã làm đúng hết), set về rỗng
+          setLocalWrongQuestions([]);
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi khi cập nhật danh sách câu sai:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [examId]);
+
+  // Làm mới mỗi khi màn hình này được hiển thị (Mount)
+  useEffect(() => {
+    fetchLatestData();
+  }, [fetchLatestData]);
 
   const handleRetakeWrong = async () => {
+    if (localWrongQuestions.length === 0) return;
+    
     Alert.alert(
       "Làm lại câu sai",
-      `Bạn muốn làm lại ${wrongQuestions.length} câu sai của đề này?`,
+      `Bạn muốn làm lại ${localWrongQuestions.length} câu sai của đề này?`,
       [
         { text: "Hủy", style: "cancel" },
         {
@@ -50,7 +82,8 @@ export function WrongAnswerListScreen({ navigation, route }: any) {
                   examId,
                   sessionId: data.data.sessionId,
                   duration: 0,
-                  questionFilter: wrongQuestions.map((q: any) => q.question_id),
+                  questionFilter: localWrongQuestions.map((q: any) => q.question_id),
+                  isPractice: true,
                 });
               } else {
                 Alert.alert("Lỗi", "Không thể tạo phiên thi mới.");
@@ -77,7 +110,7 @@ export function WrongAnswerListScreen({ navigation, route }: any) {
 
   // Group wrong questions by part
   const partMap = new Map<number, WrongQuestion[]>();
-  for (const q of wrongQuestions) {
+  for (const q of localWrongQuestions) {
     const existing = partMap.get(q.part_number) ?? [];
     existing.push(q);
     partMap.set(q.part_number, existing);
@@ -103,7 +136,7 @@ export function WrongAnswerListScreen({ navigation, route }: any) {
           {examTitle}
         </Text>
         <View style={styles.wrongCountBadge}>
-          <Text style={styles.wrongCountText}>{wrongQuestions.length} câu sai</Text>
+          <Text style={styles.wrongCountText}>{localWrongQuestions.length} câu sai</Text>
         </View>
       </View>
 
@@ -171,7 +204,7 @@ export function WrongAnswerListScreen({ navigation, route }: any) {
           <>
             <Ionicons name="refresh-outline" size={20} color="#fff" />
             <Text style={styles.retakeBtnText}>
-              Làm lại {wrongQuestions.length} câu sai
+              Làm lại {localWrongQuestions.length} câu sai
             </Text>
           </>
         )}
