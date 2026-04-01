@@ -120,17 +120,20 @@ export function AppEntry() {
 
   const navigationShim = {
     navigate: (screenName: string, params?: any) => {
-      // Always include userId in examParams for consistency across all exam screens
-      if (params || screenName.includes('Exam') || screenName.includes('Wrong')) {
+      // Create clean params for key exam entry points to avoid state pollution
+      if (['ExamTestScreen', 'ExamIntroScreen', 'WrongAnswerListScreen'].includes(screenName)) {
+        setExamParams({ ...params, userId });
+      } else if (params || screenName.includes('Exam') || screenName.includes('Wrong')) {
         setExamParams((prev: any) => ({ ...prev, ...params, userId }));
       }
+
       if (screenName === 'ExamIntroScreen') setScreen('exam-intro');
       if (screenName === 'ExamListScreen') setScreen('exam-list');
       if (screenName === 'ExamResultScreen') setScreen('exam-result');
       if (screenName === 'ExamSessionPartsScreen') setScreen('exam-session-parts');
       if (screenName === 'ExamSessionPartQuestionsScreen') setScreen('exam-session-part-questions');
       if (screenName === 'ExamQuestionDetailScreen') {
-        setPrevScreen(screenRef.current); // Lưu màn hình trước khi vào chi tiết câu
+        setPrevScreen(screenRef.current);
         setScreen('exam-question-detail');
       }
       if (screenName === 'WrongAnswerListScreen') setScreen('wrong-list');
@@ -142,10 +145,13 @@ export function AppEntry() {
       }
     },
     replace: (screenName: string, params?: any) => {
-      // Always include userId in examParams for consistency across all exam screens
-      if (params || screenName.includes('Exam') || screenName.includes('Wrong')) {
+      // Create clean params for key exam entry points to avoid state pollution
+      if (['ExamTestScreen', 'ExamIntroScreen'].includes(screenName)) {
+        setExamParams({ ...params, userId });
+      } else if (params || screenName.includes('Exam') || screenName.includes('Wrong')) {
         setExamParams((prev: any) => ({ ...prev, ...params, userId }));
       }
+
       if (screenName === 'ExamTestScreen') setScreen('exam-test');
       if (screenName === 'ExamResultScreen') setScreen('exam-result');
       if (screenName === 'ExamSessionPartsScreen') setScreen('exam-session-parts');
@@ -257,7 +263,7 @@ export function AppEntry() {
   } else if (screen === 'exam-question-detail') {
     content = <ExamQuestionDetailScreen navigation={navigationShim} route={{ params: examParams }} />;
   } else if (screen === 'exam-test') {
-    content = <ExamTestScreen navigation={navigationShim} route={{ params: examParams }} />;
+    content = <ExamTestScreen key={examParams?.sessionId || 'fresh'} navigation={navigationShim} route={{ params: examParams }} />;
   } else if (screen === 'exam-intro') {
     content = <ExamIntroScreen navigation={navigationShim} route={{ params: examParams }} />;
   } else if (screen === 'wrong-history') {
