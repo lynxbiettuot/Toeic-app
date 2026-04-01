@@ -14,11 +14,21 @@ export const getSystemVocabSets = async (req: Request, res: Response) => {
     const sets = await VocabService.getVocabSets({ search, status, includeDeleted });
     
     // Chuẩn hóa dữ liệu trả về cho Admin UI (ownerType, ownerName)
-    const data = sets.map(set => ({
-      ...set,
-      ownerType: set.owner_user_id ? "USER" : "ADMIN",
-      ownerName: set.user?.full_name ?? set.admin?.full_name ?? "Hệ thống"
-    }));
+    const data = sets.map(set => {
+      // Nếu là bộ của User và đang PUBLIC nhưng status chưa là PUBLISHED, 
+      // ta đồng bộ về PUBLISHED để Admin thấy đúng thực tế hiển thị trên Mobile.
+      let displayStatus = set.status;
+      if (set.owner_user_id && set.visibility === "PUBLIC") {
+        displayStatus = "PUBLISHED";
+      }
+
+      return {
+        ...set,
+        status: displayStatus,
+        ownerType: set.owner_user_id ? "USER" : "ADMIN",
+        ownerName: set.user?.full_name ?? set.admin?.full_name ?? "Hệ thống"
+      };
+    });
 
     return res.status(200).json({ message: "Thành công", statusCode: 200, data });
   } catch (error) {
