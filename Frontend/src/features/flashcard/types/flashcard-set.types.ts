@@ -1,7 +1,3 @@
-/**
- * Flashcard Set Types
- */
-
 export type VisibilityMode = 'PRIVATE' | 'PUBLIC';
 
 export type FlashcardSet = {

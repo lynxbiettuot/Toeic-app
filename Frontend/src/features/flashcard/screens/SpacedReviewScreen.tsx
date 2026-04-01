@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
-import { getDueReviewCards, getTodayReviewStats, rateReviewCard, getAllUserFlashcards } from '../services';
+import { getDueReviewCards, getTodayReviewStats, rateReviewCard, getPracticeCards } from '../services';
 import { BottomNavbar, NavScreen } from '../../../shared/components/BottomNavbar';
 import type { ReviewFlashcard, ReviewRating } from '../types';
 
@@ -131,7 +131,7 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
   const startExtraPractice = async () => {
     setLoading(true);
     try {
-      const allUserCards = await getAllUserFlashcards(userId);
+      const allUserCards = await getPracticeCards(userId, 50);
       if (allUserCards.length === 0) {
         setMessage('Không có thẻ nào để luyện tập.');
         setLoading(false);

@@ -1,8 +1,3 @@
-/**
- * Spaced Review Service
- * API functions for spaced repetition review operations
- */
-
 import type { ReviewFlashcard, ReviewRating, ReviewTodayStats } from '../types';
 import { authFetch, buildUrl, parseJson } from './api-client';
 
@@ -74,52 +69,35 @@ export const getTodayReviewStats = async (userId: number): Promise<ReviewTodaySt
   return parseJson<ReviewTodayStats>(response);
 };
 
-/**
- * Load all user's flashcards from all sets for extra practice
- */
-export const getAllUserFlashcards = async (userId: number): Promise<ReviewFlashcard[]> => {
+export const getPracticeCards = async (userId: number, limit: number = 50): Promise<ReviewFlashcard[]> => {
   try {
-    const setResponse = await authFetch(buildUrl(`/flashcards/sets?userId=${userId}`));
-    const setJson = (await setResponse.json()) as { data?: { id: number; title: string }[] };
+    const response = await authFetch(
+      buildUrl(`/flashcards/practice?userId=${userId}&limit=${limit}`)
+    );
+    const json = await response.json();
 
-    if (!setResponse.ok || !setJson.data) {
-      throw new Error('Failed to load sets');
+    if (!response.ok || !json.data) {
+      throw new Error('Failed to load practice flashcards');
     }
 
-    const allCards: ReviewFlashcard[] = [];
-
-    for (const set of setJson.data) {
-      const cardResponse = await authFetch(buildUrl(`/flashcards/sets/${set.id}/cards?userId=${userId}`));
-      const cardJson = (await cardResponse.json()) as {
-        data?: { cards: any[] };
-      };
-
-      if (cardResponse.ok && cardJson.data?.cards) {
-        allCards.push(
-          ...cardJson.data.cards.map((card: any) => ({
-            id: card.id,
-            word: card.word,
-            word_type: card.word_type ?? null,
-            definition: card.definition,
-            pronunciation: card.pronunciation,
-            example: card.example,
-            image_url: card.image_url,
-            setId: set.id,
-            setTitle: set.title,
-            reviewState: {
-              nextReviewAt: null,
-              intervalDays: 1,
-              easeFactor: 2.5,
-              repetitions: 0
-            }
-          }))
-        );
+    return json.data.cards.map((card: any) => ({
+      id: card.id,
+      word: card.word,
+      word_type: card.word_type ?? null,
+      definition: card.definition,
+      pronunciation: card.pronunciation,
+      example: card.example,
+      image_url: card.image_url,
+      setId: card.setId,
+      setTitle: card.setTitle,
+      // Khởi tạo trạng thái mặc định cho các thẻ luyện tập chay
+      reviewState: {
+        nextReviewAt: null, intervalDays: 1, easeFactor: 2.5, repetitions: 0
       }
-    }
-
-    return allCards;
+    }));
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'Failed to load all flashcards');
+    throw new Error('Không thể tải danh sách luyện tập');
   }
 };
+
 

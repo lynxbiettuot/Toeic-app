@@ -1,8 +1,3 @@
-/**
- * Spaced Repetition Service
- * Business logic for review and learning algorithm
- */
-
 import { prisma } from '../../lib/prisma.js';
 import { buildNextSchedule, countDueCards } from '../../utils/flashcard/index.js';
 import type { ReviewRating } from '../../utils/flashcard/normalizers.js';
@@ -191,4 +186,33 @@ export const getTodayReviewStats = async (userId: number) => {
   });
 
   return { reviewedCount, startOfDay, endOfDay };
+};
+
+export const getPracticeCards = async (userId: number, limit: number) => {
+  const randomCards = await prisma.$queryRaw`
+    SELECT c.*, s.title as set_title
+    FROM flashcards c
+    INNER JOIN flashcard_sets s ON c.set_id = s.id
+    WHERE s.owner_user_id = ${userId}
+    ORDER BY RAND()
+    LIMIT ${limit}
+  `;
+
+  return (randomCards as any[]).map(card => ({
+    id: card.id,
+    setId: card.set_id,
+    setTitle: card.set_title,
+    word: card.word,
+    word_type: card.word_type,
+    pronunciation: card.pronunciation,
+    definition: card.definition,
+    example: card.example,
+    image_url: card.image_url,
+    reviewState: {
+      easeFactor: 2.5,
+      intervalDays: 1,
+      repetitions: 0,
+      nextReviewAt: null
+    }
+  }));
 };

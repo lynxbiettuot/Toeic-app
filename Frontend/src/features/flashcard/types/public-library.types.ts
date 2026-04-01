@@ -1,7 +1,3 @@
-/**
- * Public Library Types
- */
-
 import type { PublicFlashcardCard } from './flashcard-card.types';
 
 export type PublicFlashcardSet = {

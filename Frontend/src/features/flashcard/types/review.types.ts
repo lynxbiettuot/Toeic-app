@@ -1,7 +1,3 @@
-/**
- * Spaced Review Types
- */
-
 export type ReviewRating = 'FORGOT' | 'HARD' | 'GOOD' | 'EASY';
 
 export type ReviewFlashcard = {

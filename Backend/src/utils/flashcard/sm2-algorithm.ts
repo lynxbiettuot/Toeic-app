@@ -1,8 +1,3 @@
-/**
- * SM-2 Spaced Repetition Algorithm
- * Modified SM-2 algorithm for calculating next review interval
- */
-
 import type { ReviewRating } from './normalizers.js';
 
 export interface NextSchedule {

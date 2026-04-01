@@ -11,9 +11,11 @@ import {
   TextInput,
   View
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
+import { uploadToCloudinary } from '../../../shared/services/cloudinaryService';
 import {
   createFlashcard,
   deleteFlashcard,
@@ -64,6 +66,7 @@ export function FlashcardSetDetailScreen({
   const [modalError, setModalError] = useState<string | null>(null);
   const [imageLoadErrorIds, setImageLoadErrorIds] = useState<Record<number, boolean>>({});
   const [modalImagePreviewError, setModalImagePreviewError] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const modalTitle = useMemo(() => (editingCard ? 'Sửa flashcard' : 'Tạo flashcard'), [editingCard]);
   const previewImageUrl = useMemo(() => formState.imageUrl.trim(), [formState.imageUrl]);
@@ -112,7 +115,7 @@ export function FlashcardSetDetailScreen({
   };
 
   const closeModal = () => {
-    if (!submitting) {
+    if (!submitting && !uploadingImage) {
       setModalVisible(false);
       setEditingCard(null);
       setFormState(EMPTY_FORM);
@@ -121,9 +124,57 @@ export function FlashcardSetDetailScreen({
     }
   };
 
+  const uploadImageFromUri = async (imageUri: string) => {
+    setUploadingImage(true);
+
+    try {
+      const uploadedUrl = await uploadToCloudinary(imageUri);
+
+      if (!uploadedUrl) {
+        setModalError('Upload ảnh lên Cloudinary thất bại. Vui lòng thử lại.');
+        return;
+      }
+
+      setFormState((prev) => ({ ...prev, imageUrl: uploadedUrl }));
+      setModalImagePreviewError(false);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const pickImageFromLibraryAndUpload = async () => {
+    setModalError(null);
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== 'granted') {
+      setModalError('Bạn cần cấp quyền thư viện ảnh để chọn ảnh từ máy.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8
+    });
+
+    const imageUri = result.assets?.[0]?.uri;
+
+    if (result.canceled || !imageUri) {
+      return;
+    }
+
+    await uploadImageFromUri(imageUri);
+  };
+
   const saveCard = async () => {
     if (!formState.word.trim() || !formState.definition.trim()) {
       setModalError('Từ vựng và định nghĩa là bắt buộc.');
+      return;
+    }
+
+    if (uploadingImage) {
+      setModalError('Ảnh đang được upload. Vui lòng đợi hoàn tất rồi lưu.');
       return;
     }
 
@@ -314,6 +365,20 @@ export function FlashcardSetDetailScreen({
                 placeholder="https://example.com/image.jpg"
                 autoCapitalize="none"
               />
+              <Pressable
+                style={[styles.uploadImageButton, uploadingImage && styles.uploadImageButtonDisabled]}
+                onPress={pickImageFromLibraryAndUpload}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color="#4f4f4f" />
+                ) : (
+                  <Ionicons name="cloud-upload-outline" size={15} color="#4f4f4f" />
+                )}
+                <Text style={styles.uploadImageButtonText}>
+                  {uploadingImage ? 'Đang upload...' : 'Upload ảnh'}
+                </Text>
+              </Pressable>
 
               {hasPreviewImageUrl ? (
                 !modalImagePreviewError ? (
@@ -454,6 +519,27 @@ const styles = StyleSheet.create({
     height: 40,
     marginBottom: 10,
     backgroundColor: '#fff'
+  },
+  uploadImageButton: {
+    backgroundColor: '#eceff1',
+    borderRadius: 8,
+    height: 34,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6
+  },
+  uploadImageButtonDisabled: {
+    opacity: 0.75
+  },
+  uploadImageButtonText: {
+    color: '#4f4f4f',
+    fontWeight: '600',
+    fontSize: 12,
+    lineHeight: 14
   },
   multilineInput: {
     height: 80,

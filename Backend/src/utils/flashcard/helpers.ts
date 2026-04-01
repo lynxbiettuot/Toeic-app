@@ -1,8 +1,3 @@
-/**
- * Helper functions for Flashcard feature
- * Business logic utilities for flashcard operations
- */
-
 import { prisma } from '../../lib/prisma.js';
 
 /**

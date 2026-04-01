@@ -16,6 +16,7 @@
     "expo": "~54.0.13",
     "expo-av": "~16.0.8",
     "expo-constants": "~18.0.13",
+    "expo-image-picker": "^55.0.14",
     "expo-status-bar": "~3.0.8",
     "react": "19.1.0",
     "react-dom": "19.1.0",

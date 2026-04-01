@@ -22,9 +22,6 @@ export async function getAuthHeaders(headers?: HeadersInit): Promise<HeadersInit
   };
 }
 
-/**
- * Hàm gọi API có tâm của bạn: Tự động xử lý lỗi 401 và Refresh Token
- */
 export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   // Chuẩn bị header ban đầu
   const initialHeaders = await getAuthHeaders(init?.headers);
