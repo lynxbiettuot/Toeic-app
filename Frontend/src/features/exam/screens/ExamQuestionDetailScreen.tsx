@@ -27,6 +27,7 @@ export function ExamQuestionDetailScreen({ navigation, route }: any) {
 
   useEffect(() => {
     if (!examId || !sessionId || !questionId) {
+      console.warn("Thiếu tham số: ", { examId, sessionId, questionId });
       setLoading(false);
       return;
     }
@@ -38,7 +39,7 @@ export function ExamQuestionDetailScreen({ navigation, route }: any) {
           setDetail(data.data);
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => console.error("Lỗi khi tải chi tiết câu hỏi:", err))
       .finally(() => setLoading(false));
   }, [examId, sessionId, questionId]);
 
@@ -130,10 +131,27 @@ export function ExamQuestionDetailScreen({ navigation, route }: any) {
     return `${minutes}:${seconds}`;
   };
 
-  if (loading || !detail) {
+  if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
         <ActivityIndicator size="large" color={AUTH_ACTION_COLOR} />
+      </View>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <Ionicons name="alert-circle-outline" size={48} color="#999" />
+        <Text style={{ marginTop: 12, color: "#666", fontSize: 16 }}>
+          Không tìm thấy dữ liệu câu hỏi.
+        </Text>
+        <TouchableOpacity 
+          style={{ marginTop: 24, padding: 12, backgroundColor: AUTH_ACTION_COLOR, borderRadius: 8 }}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Quay lại</Text>
+        </TouchableOpacity>
       </View>
     );
   }
