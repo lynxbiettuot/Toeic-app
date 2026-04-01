@@ -83,7 +83,6 @@ export function ExamCreatePage() {
           </div>
 
           <p className={`import-status ${message.type}`}>{message.value}</p>
-          <p className="mock-url">Đã bỏ chức năng bảng quy đổi điểm theo yêu cầu.</p>
         </form>
       </div>
     </section>

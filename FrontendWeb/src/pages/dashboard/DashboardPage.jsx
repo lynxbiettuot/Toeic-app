@@ -460,7 +460,6 @@ export function DashboardPage({ mode = "overview" }) {
                         <DetailRow label="Phiên âm" value={selectedSetWord.pronunciation || "-"} />
                         <DetailRow label="Ví dụ" value={selectedSetWord.example || "-"} />
                         <UrlDetailRow label="URL ảnh" value={selectedSetWord.image_url} mediaType="image" />
-                        <UrlDetailRow label="URL audio" value={selectedSetWord.audio_url} mediaType="audio" />
                         <button className="table-inline-button" type="button" onClick={() => setSelectedSetWordId(null)}>
                           Quay lại bảng từ
                         </button>
