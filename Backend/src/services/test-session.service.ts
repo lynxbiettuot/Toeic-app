@@ -145,6 +145,8 @@ export class TestSessionService {
     if (!data) throw new Error("Không tìm thấy dữ liệu phiên làm bài.");
 
     const correctCount = data.questions.filter(q => data.userAnswerMap.get(q.id)?.is_correct).length;
+    const answeredCount = data.userAnswerMap.size;
+    const wrongCount = Math.max(answeredCount - correctCount, 0);
 
     // Thống kê theo Part
     const partBuckets = new Map<number, any>();
@@ -168,6 +170,8 @@ export class TestSessionService {
       session: data.session,
       total_questions: data.questions.length,
       correct_count: correctCount,
+      answered_count: answeredCount,
+      wrong_count: wrongCount,
       part_stats: partStats,
     };
   }
@@ -224,9 +228,12 @@ export class TestSessionService {
       question: {
         ...question,
         explanation: aiExplanation,
-        media
+        media,
+        is_correct: userAnswer?.is_correct ?? null,
+        selected_option: userAnswer?.selected_option ?? null,
       },
-      userAnswer
+      userAnswer,
+      selected_answer_label: userAnswer?.selected_option ?? null,
     };
   }
 

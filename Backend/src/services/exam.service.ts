@@ -184,6 +184,9 @@ export class ExamService {
         ...rest,
         image_url: media.image_url,
         image_urls: media.image_urls,
+        audio_url: media.audio_url,
+        transcript: media.transcript,
+        passage_text: media.passage_text,
       };
     });
   }
