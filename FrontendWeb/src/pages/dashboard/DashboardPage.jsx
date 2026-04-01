@@ -242,7 +242,7 @@ export function DashboardPage({ mode = "overview" }) {
               <option value="all">Tất cả</option>
             </select>
             <button className="exam-add-button" type="button" onClick={downloadOverviewReport}>
-              Xuất Excel
+              Xuất CSV
             </button>
           </div>
 

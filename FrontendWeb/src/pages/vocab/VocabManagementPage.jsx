@@ -38,7 +38,8 @@ export function VocabManagementPage() {
   const [detailSearch, setDetailSearch] = useState("");
   const [selectedDetailCardId, setSelectedDetailCardId] = useState(null);
   const [savingDetail, setSavingDetail] = useState(false);
-  const [message, setMessage] = useState("");
+  const [pageMessage, setPageMessage] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
 
   const fetchSets = async () => {
     setLoading(true);
@@ -65,7 +66,7 @@ export function VocabManagementPage() {
   };
 
   useEffect(() => {
-    fetchSets().catch((err) => setMessage(err instanceof Error ? err.message : "Không thể tải bộ từ vựng."));
+    fetchSets().catch((err) => setPageMessage(err instanceof Error ? err.message : "Không thể tải bộ từ vựng."));
   }, [search, statusFilter]);
 
   useEffect(() => { setCurrentSetPage(1); }, [search, statusFilter]);
@@ -88,9 +89,9 @@ export function VocabManagementPage() {
         body: JSON.stringify({ status: nextStatus }),
       });
       await fetchSets();
-      setMessage("Cập nhật trạng thái bộ từ vựng thành công.");
+      setPageMessage("Cập nhật trạng thái bộ từ vựng thành công.");
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Không thể cập nhật trạng thái bộ từ vựng.");
+      setPageMessage(err instanceof Error ? err.message : "Không thể cập nhật trạng thái bộ từ vựng.");
     }
   };
 
@@ -101,22 +102,22 @@ export function VocabManagementPage() {
   };
 
   const addCardToDraft = () => {
-    setMessage("");
+    setModalMessage("");
     if (!cardDraft.word.trim() || !cardDraft.definition.trim()) {
-      setMessage("Flashcard cần ít nhất từ vựng và định nghĩa.");
+      setModalMessage("Flashcard cần ít nhất từ vựng và định nghĩa.");
       return;
     }
     if (cardDraft.image_url.trim() && !isHttpUrl(cardDraft.image_url)) {
-      setMessage("URL ảnh của flashcard phải là HTTP/HTTPS.");
+      setModalMessage("URL ảnh của flashcard phải là HTTP/HTTPS.");
       return;
     }
     setCards((curr) => [...curr, { id: Date.now(), ...cardDraft }]);
     setCardDraft({ word: "", definition: "", word_type: "", pronunciation: "", example: "", image_url: "" });
-    setMessage("Đã thêm flashcard vào bản nháp.");
+    setModalMessage("Đã thêm flashcard vào bản nháp.");
   };
 
   const saveManualSet = async () => {
-    if (!title.trim()) { setMessage("Nhập tiêu đề bộ từ vựng trước khi lưu."); return; }
+    if (!title.trim()) { setModalMessage("Nhập tiêu đề bộ từ vựng trước khi lưu."); return; }
     try {
       await apiFetchJson(VOCAB_API_BASE_URL, {
         method: "POST",
@@ -126,10 +127,11 @@ export function VocabManagementPage() {
         }),
       });
       setTitle(""); setDescription(""); setCards([]); setMode(null);
-      setMessage("Đã lưu bộ từ vựng ở trạng thái Private.");
+      setModalMessage("");
+      setPageMessage("Đã lưu bộ từ vựng ở trạng thái Private.");
       await fetchSets();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Không thể tạo bộ từ vựng.");
+      setModalMessage(err instanceof Error ? err.message : "Không thể tạo bộ từ vựng.");
     }
   };
 
@@ -143,9 +145,9 @@ export function VocabManagementPage() {
       setDetailDraft({ title: detail.title || "", description: detail.description || "" });
       setDetailCards((detail.flashcards || []).map((c) => ({ ...c })));
       setDetailSearch(""); setSelectedDetailCardId(null); setMode("detail");
-      setMessage("Đã tải chi tiết bộ từ vựng.");
+      setModalMessage("");
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Không thể tải chi tiết bộ từ vựng.");
+      setPageMessage(err instanceof Error ? err.message : "Không thể tải chi tiết bộ từ vựng.");
     } finally {
       setDetailLoading(false);
     }
@@ -153,9 +155,22 @@ export function VocabManagementPage() {
 
   const saveDetailSet = async () => {
     if (!selectedSetId || !detailDraft.title.trim()) {
-      setMessage("Tiêu đề bộ từ vựng không được để trống.");
+      setModalMessage("Tiêu đề bộ từ vựng không được để trống.");
       return;
     }
+
+    const invalidCard = detailCards.find((card) => {
+      const imageUrl = typeof card.image_url === "string" ? card.image_url.trim() : String(card.image_url || "").trim();
+      return imageUrl && !isHttpUrl(imageUrl);
+    });
+
+    if (invalidCard) {
+      setModalMessage(
+        `URL ảnh không hợp lệ cho từ ${invalidCard.word || "(không có từ)"}. Vui lòng dùng link HTTP/HTTPS.`
+      );
+      return;
+    }
+
     try {
       setSavingDetail(true);
       await apiFetchJson(`${VOCAB_API_BASE_URL}/${selectedSetId}`, {
@@ -168,16 +183,17 @@ export function VocabManagementPage() {
       });
       await fetchSets();
       setMode(null);
-      setMessage("Đã lưu chỉnh sửa bộ từ vựng.");
+      setModalMessage("");
+      setPageMessage("Đã lưu chỉnh sửa bộ từ vựng.");
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Không thể lưu chỉnh sửa bộ từ vựng.");
+      setModalMessage(err instanceof Error ? err.message : "Không thể lưu chỉnh sửa bộ từ vựng.");
     } finally {
       setSavingDetail(false);
     }
   };
 
   const handleImportSubmit = async () => {
-    if (!importFile) { setMessage("Vui lòng chọn file Excel/CSV để import."); return; }
+    if (!importFile) { setModalMessage("Vui lòng chọn file Excel/CSV để import."); return; }
     setImporting(true);
     const fd = new FormData();
     fd.append("file", importFile);
@@ -185,11 +201,12 @@ export function VocabManagementPage() {
     fd.append("description", importDescription || "Imported by admin");
     try {
       await apiFetchJson(`${VOCAB_API_BASE_URL}/import`, { method: "POST", body: fd });
-      setMessage("Import thành công, bộ từ vựng đang ở trạng thái Private.");
+      setModalMessage("");
+      setPageMessage("Import thành công, bộ từ vựng đang ở trạng thái Private.");
       setMode(null); setImportFile(null); setImportTitle(""); setImportDescription("");
       await fetchSets();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Không thể import bộ từ vựng.");
+      setModalMessage(err instanceof Error ? err.message : "Không thể import bộ từ vựng.");
     } finally {
       setImporting(false);
     }
@@ -214,10 +231,10 @@ export function VocabManagementPage() {
         <select className="exam-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           {VOCAB_STATUS_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
-        <button className="exam-add-button" onClick={() => { setSelectedSetId(null); setMode("manual"); }}>Tạo bộ mới</button>
+        <button className="exam-add-button" onClick={() => { setSelectedSetId(null); setModalMessage(""); setMode("manual"); }}>Tạo bộ mới</button>
       </div>
 
-      {message && <p className="page-feedback info">{message}</p>}
+      {pageMessage && <p className="page-feedback info">{pageMessage}</p>}
 
       <VocabSetTable 
         sets={paginatedSets}
@@ -233,6 +250,7 @@ export function VocabManagementPage() {
       {mode && (
         <div className="user-modal-overlay" onClick={() => setMode(null)}>
           <div className="create-panel vocab-panel user-modal vocab-modal-panel" onClick={(e) => e.stopPropagation()}>
+            {modalMessage && <p className="page-feedback error modal-feedback">{modalMessage}</p>}
             {mode !== "detail" && (
               <>
                 <div className="create-tabs">
@@ -240,7 +258,7 @@ export function VocabManagementPage() {
                   <button className={`create-tab ${mode === "import" ? "is-active" : ""}`} onClick={() => setMode("import")}>Import Excel/CSV</button>
                 </div>
                 <div className="table-action-group">
-                  <button className="table-inline-button" onClick={() => setMode(null)}>Đóng</button>
+                  <button className="table-inline-button" onClick={() => { setModalMessage(""); setMode(null); }}>Đóng</button>
                 </div>
               </>
             )}
@@ -267,7 +285,7 @@ export function VocabManagementPage() {
               <VocabDetailModal 
                 detailDraft={detailDraft} setDetailDraft={setDetailDraft}
                 readOnly={detailReadOnly}
-                onClose={() => setMode(null)}
+                onClose={() => { setModalMessage(""); setMode(null); }}
                 onShowList={() => setSelectedDetailCardId(null)}
                 onAddCard={() => { const id = `new-${Date.now()}`; setDetailCards(curr => [...curr, { id, word: "", definition: "", word_type: "", pronunciation: "", example: "", image_url: "", audio_url: "" }]); setSelectedDetailCardId(id); }}
                 loading={detailLoading}

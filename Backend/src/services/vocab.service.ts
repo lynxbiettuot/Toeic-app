@@ -3,6 +3,24 @@ import { prisma } from "../lib/prisma.js";
 import { isHttpUrl } from "../utils/media.utils.js";
 
 const VALID_SET_STATUSES = ["DRAFT", "PUBLISHED", "HIDDEN"] as const;
+const FLASHCARD_IMAGE_URL_MAX_LENGTH = 191;
+
+const sanitizeImageUrlForDb = (value: string): string => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return "";
+  }
+
+  // Try to shorten long tracking URLs first by dropping query/hash.
+  try {
+    const url = new URL(normalized);
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return normalized;
+  }
+};
 
 const normalizeExcelCellText = (row: ExcelJS.Row, columnIndex: number): string => {
   const cell = row.getCell(columnIndex);
@@ -99,6 +117,16 @@ export class VocabService {
   static async createVocabSet(data: { title: string; description?: string; cards: any[]; adminId?: number }) {
     if (!data.title) throw new Error("Tiêu đề bộ từ vựng là bắt buộc.");
 
+    const invalidCreateCard = data.cards.find(
+      (card) => card?.image_url && String(card.image_url).trim() && !isHttpUrl(String(card.image_url))
+    );
+
+    if (invalidCreateCard) {
+      throw new Error(
+        `URL ảnh không hợp lệ cho từ ${invalidCreateCard.word || "(không có từ)"}. Chỉ chấp nhận HTTP/HTTPS.`
+      );
+    }
+
     return prisma.$transaction(async (tx) => {
       const set = await tx.flashcard_sets.create({
         data: {
@@ -121,7 +149,7 @@ export class VocabService {
             word_type: c.word_type,
             pronunciation: c.pronunciation,
             example: c.example,
-            image_url: c.image_url,
+            image_url: c.image_url?.trim() || null,
           })),
         });
       }
@@ -147,10 +175,17 @@ export class VocabService {
         const word = normalizeExcelCellText(row, 1);
         const def = normalizeExcelCellText(row, 2);
         if (word && def) {
-          const imageUrl = normalizeExcelCellText(row, 6) || null;
+          const rawImageUrl = normalizeExcelCellText(row, 6);
+          const imageUrl = rawImageUrl ? sanitizeImageUrlForDb(rawImageUrl) : null;
 
           if (imageUrl && !isHttpUrl(imageUrl)) {
             throw new Error(`Dòng ${rowNum}: URL ảnh không hợp lệ (chỉ chấp nhận HTTP/HTTPS).`);
+          }
+
+          if (imageUrl && imageUrl.length > FLASHCARD_IMAGE_URL_MAX_LENGTH) {
+            throw new Error(
+              `Dòng ${rowNum}: URL ảnh quá dài (${imageUrl.length} ký tự). Tối đa ${FLASHCARD_IMAGE_URL_MAX_LENGTH} ký tự.`
+            );
           }
 
           cards.push({
@@ -187,6 +222,16 @@ export class VocabService {
 
       // 2. Đồng bộ danh sách thẻ (nếu có tham số cards)
       if (cards && Array.isArray(cards)) {
+        const invalidUpdateCard = cards.find(
+          (card) => card?.image_url && String(card.image_url).trim() && !isHttpUrl(String(card.image_url))
+        );
+
+        if (invalidUpdateCard) {
+          throw new Error(
+            `URL ảnh không hợp lệ cho từ ${invalidUpdateCard.word || "(không có từ)"}. Chỉ chấp nhận HTTP/HTTPS.`
+          );
+        }
+
         // Lấy danh sách ID thẻ hiện có trong DB của bộ này
         const existingCards = await tx.flashcards.findMany({
           where: { set_id: setId },
@@ -217,13 +262,20 @@ export class VocabService {
 
         // Cập nhật hoặc tạo mới từng thẻ
         for (const c of cards) {
+          const normalizedImageUrl = c.image_url?.trim() || null;
+          if (normalizedImageUrl && !isHttpUrl(normalizedImageUrl)) {
+            throw new Error(
+              `URL ảnh không hợp lệ cho từ ${c.word || "(không có từ)"}. Chỉ chấp nhận HTTP/HTTPS.`
+            );
+          }
+
           const cardData = {
             word: c.word?.trim() || "",
             definition: c.definition?.trim() || "",
             word_type: c.word_type?.trim() || null,
             pronunciation: c.pronunciation?.trim() || null,
             example: c.example?.trim() || null,
-            image_url: c.image_url?.trim() || null,
+            image_url: normalizedImageUrl,
             updated_at: new Date(),
           };
 

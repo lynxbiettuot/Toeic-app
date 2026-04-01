@@ -29,14 +29,6 @@ export function ImportVocabForm({
           onChange={onFileChange}
         />
       </label>
-      <div className="preview-box">
-        <p className="detail-label">Preview danh sách thẻ</p>
-        <div className="preview-row">
-          <span>Word</span>
-          <span>Definition</span>
-          <span>Image_URL / Audio_URL (HTTP/HTTPS)</span>
-        </div>
-      </div>
       <button className="import-button import-button-primary" type="button" onClick={onImport} disabled={importing}>
         {importing ? "Đang import..." : "Lưu vào Private"}
       </button>

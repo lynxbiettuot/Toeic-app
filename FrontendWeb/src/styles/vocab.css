@@ -5,6 +5,10 @@
     max-height: calc(100vh - 56px);
     overflow: auto;
   }
+
+  .modal-feedback {
+    margin: 0 0 12px;
+  }
   
   .create-tabs {
     display: grid;

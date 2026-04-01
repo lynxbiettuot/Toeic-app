@@ -49,6 +49,7 @@ export function FlashcardEditor({
       />
       <input
         className="import-input"
+        type="url"
         placeholder="Image URL"
         value={card.image_url}
         disabled={readOnly}
