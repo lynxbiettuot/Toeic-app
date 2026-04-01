@@ -31,7 +31,7 @@ export function QuestionEditor({
         </select>
       </div>
 
-      {[5, 6, 7].includes(partNumber) && (
+      {[3, 4, 5, 6, 7].includes(partNumber) && (
         <div className="import-input-group">
           <label>Nội dung:</label>
           <textarea

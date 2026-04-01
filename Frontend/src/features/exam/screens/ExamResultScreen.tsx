@@ -104,7 +104,11 @@ export function ExamResultScreen({ navigation, route }: any) {
           style={styles.button}
           onPress={() =>
             isPractice
-              ? navigation.navigate("WrongAnswerListScreen")
+              ? navigation.navigate("WrongAnswerListScreen", {
+                  examId,
+                  examTitle: summary?.exam?.title || "Câu sai",
+                  sessionId,
+                })
               : navigation.navigate("ExamListScreen")
           }
         >

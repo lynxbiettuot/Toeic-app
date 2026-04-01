@@ -130,17 +130,90 @@ export class VocabService {
     return this.createVocabSet({ ...metadata, cards });
   }
 
-  /**
-   * Cập nhật thông tin bộ từ vựng
-   */
-  static async updateVocabSet(setId: number, data: { title?: string; description?: string; cover_image_url?: string }) {
-    return prisma.flashcard_sets.update({
-      where: { id: setId },
-      data: {
-        title: data.title?.trim(),
-        description: data.description?.trim(),
-        cover_image_url: data.cover_image_url,
-      },
+  static async updateVocabSet(setId: number, data: { title?: string; description?: string; cards?: any[]; cover_image_url?: string }) {
+    const { title, description, cards, cover_image_url } = data;
+
+    return prisma.$transaction(async (tx) => {
+      // 1. Cập nhật thông tin cơ bản của bộ
+      const set = await tx.flashcard_sets.update({
+        where: { id: setId },
+        data: {
+          title: title?.trim(),
+          description: description?.trim(),
+          cover_image_url,
+          updated_at: new Date(),
+        },
+      });
+
+      // 2. Đồng bộ danh sách thẻ (nếu có tham số cards)
+      if (cards && Array.isArray(cards)) {
+        // Lấy danh sách ID thẻ hiện có trong DB của bộ này
+        const existingCards = await tx.flashcards.findMany({
+          where: { set_id: setId },
+          select: { id: true }
+        });
+        const existingIds = existingCards.map(c => c.id);
+
+        // Lấy danh sách ID số từ Frontend gửi lên (những thẻ cũ đang sửa)
+        const incomingIds = cards
+          .map(c => Number(c.id))
+          .filter(id => !isNaN(id));
+
+        // Xác định các thẻ cần xóa (có trong DB nhưng không có trong danh sách mới)
+        const cardsToDelete = existingIds.filter(id => !incomingIds.includes(id));
+
+        if (cardsToDelete.length > 0) {
+          // Xóa các bảng liên quan trước do ràng buộc FK
+          await tx.spaced_repetition_cards.deleteMany({
+            where: { flashcard_id: { in: cardsToDelete } }
+          });
+          await tx.flashcard_review_logs.deleteMany({
+            where: { flashcard_id: { in: cardsToDelete } }
+          });
+          await tx.flashcards.deleteMany({
+            where: { id: { in: cardsToDelete } }
+          });
+        }
+
+        // Cập nhật hoặc tạo mới từng thẻ
+        for (const c of cards) {
+          const cardData = {
+            word: c.word?.trim() || "",
+            definition: c.definition?.trim() || "",
+            word_type: c.word_type?.trim() || null,
+            pronunciation: c.pronunciation?.trim() || null,
+            example: c.example?.trim() || null,
+            image_url: c.image_url?.trim() || null,
+            updated_at: new Date(),
+          };
+
+          const isNew = typeof c.id === 'string' && c.id.startsWith('new-');
+          if (isNew) {
+            await tx.flashcards.create({
+              data: {
+                ...cardData,
+                set_id: setId,
+              }
+            });
+          } else {
+            const numericId = Number(c.id);
+            if (!isNaN(numericId)) {
+              await tx.flashcards.update({
+                where: { id: numericId },
+                data: cardData
+              });
+            }
+          }
+        }
+
+        // 3. Cập nhật lại số lượng thẻ thực tế
+        await tx.flashcard_sets.update({
+          where: { id: setId },
+          data: { card_count: cards.length }
+        });
+      }
+
+      return set;
     });
   }
 
@@ -156,9 +229,7 @@ export class VocabService {
     if (!targetSet) throw new Error("Không tìm thấy bộ từ vựng.");
 
     const updateData: any = { status };
-    if (targetSet.owner_user_id) {
-      updateData.visibility = status === "PUBLISHED" ? "PUBLIC" : "PRIVATE";
-    }
+    updateData.visibility = status === "PUBLISHED" ? "PUBLIC" : "PRIVATE";
 
     return prisma.flashcard_sets.update({
       where: { id: setId },

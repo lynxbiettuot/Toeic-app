@@ -249,8 +249,6 @@ export function VocabManagementPage() {
               <ManualCreateForm 
                 title={title} setTitle={setTitle}
                 description={description} setDescription={setDescription}
-                cardDraft={cardDraft} setCardDraft={setCardDraft}
-                cards={cards} onAddCard={addCardToDraft} onRemoveCard={(id) => setCards(curr => curr.filter(c => c.id !== id))}
                 onSave={saveManualSet}
               />
             )}
@@ -282,6 +280,7 @@ export function VocabManagementPage() {
                 onSaveSet={saveDetailSet}
                 saving={savingDetail}
                 detailSearch={detailSearch} setDetailSearch={setDetailSearch}
+                detailCards={detailCards}
               />
             )}
           </div>
