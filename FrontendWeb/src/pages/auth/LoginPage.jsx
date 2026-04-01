@@ -65,7 +65,7 @@ export function LoginPage() {
         <div className="login-visual">
           <div className="login-title-wrap">
             <p className="eyebrow">Màn hình đăng nhập Admin</p>
-            <h1>Đăng nhập hệ thống quản trị TOEIC</h1>
+            <h1>Login</h1>
             <span className="title-underline" />
           </div>
 
