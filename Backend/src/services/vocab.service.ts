@@ -11,12 +11,7 @@ export class VocabService {
   static async getVocabSets(filters: { search?: string; status?: string; includeDeleted?: boolean }) {
     const { search, status, includeDeleted } = filters;
 
-    const where: any = {
-      OR: [
-        { is_system: true },
-        { visibility: "PUBLIC" },
-      ],
-    };
+    const where: any = {};
 
     if (status === "DELETED") {
       where.deleted_at = { not: null };

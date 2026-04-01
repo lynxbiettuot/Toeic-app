@@ -10,7 +10,9 @@ export const importExamFromExcel = async (req: Request, res: Response) => {
     return res.status(400).json({ message: "Vui lòng upload file Excel.", statusCode: 400 });
   }
 
-  try {
+  try
+  {
+    console.log(req.file)
     const { title, year, type, createdBy } = req.body;
     const adminId = parseIntegerField(createdBy, undefined);
 
@@ -92,7 +94,12 @@ export const getQuestionDetail = async (req: Request, res: Response) => {
  */
 export const createManualExam = async (req: Request, res: Response) => {
   try {
-    const exam = await ExamService.createManualExam(req.body);
+    const { title, year, type } = req.body;
+    const exam = await ExamService.createManualExam({
+      title,
+      year: parseIntegerField(year),
+      type
+    });
     return res.status(201).json({ message: "Tạo đề thành công", statusCode: 201, data: exam });
   } catch (error: any) {
     return res.status(400).json({ message: error.message, statusCode: 400 });
@@ -106,7 +113,13 @@ export const updateExam = async (req: Request, res: Response) => {
   try {
     const examSetId = parseIntParam(req.params.examSetId);
     if (!examSetId) return res.status(400).json({ message: "ID không hợp lệ" });
-    const exam = await ExamService.updateExam(examSetId, req.body);
+    
+    const { title, year, type } = req.body;
+    const exam = await ExamService.updateExam(examSetId, {
+      title,
+      year: parseIntegerField(year),
+      type
+    });
     return res.status(200).json({ message: "Cập nhật thành công", statusCode: 200, data: exam });
   } catch (error: any) {
     return res.status(400).json({ message: error.message, statusCode: 400 });
@@ -162,7 +175,14 @@ export const createQuestion = async (req: Request, res: Response) => {
   try {
     const examSetId = parseIntParam(req.params.examSetId);
     if (!examSetId) return res.status(400).json({ message: "ID không hợp lệ" });
-    const question = await ExamService.createQuestion(examSetId, req.body);
+    
+    const data = {
+      ...req.body,
+      part_number: parseIntegerField(req.body.part_number),
+      question_number: parseIntegerField(req.body.question_number),
+    };
+
+    const question = await ExamService.createQuestion(examSetId, data);
     return res.status(201).json({ message: "Thành công", statusCode: 201, data: question });
   } catch (error: any) {
     return res.status(400).json({ message: error.message, statusCode: 400 });
@@ -178,7 +198,12 @@ export const updateQuestionDetail = async (req: Request, res: Response) => {
     const questionNumber = parseIntParam(req.params.questionNumber);
     if (!examSetId || !questionNumber) return res.status(400).json({ message: "Tham số thiếu" });
 
-    await ExamService.updateQuestionDetail(examSetId, questionNumber, req.body);
+    const data = {
+      ...req.body,
+      part_number: parseIntegerField(req.body.part_number),
+    };
+
+    await ExamService.updateQuestionDetail(examSetId, questionNumber, data);
     return res.status(200).json({ message: "Thành công", statusCode: 200 });
   } catch (error: any) {
     return res.status(400).json({ message: error.message, statusCode: 400 });
