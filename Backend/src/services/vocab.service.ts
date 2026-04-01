@@ -4,6 +4,45 @@ import { isHttpUrl } from "../utils/media.utils.js";
 
 const VALID_SET_STATUSES = ["DRAFT", "PUBLISHED", "HIDDEN"] as const;
 
+const normalizeExcelCellText = (row: ExcelJS.Row, columnIndex: number): string => {
+  const cell = row.getCell(columnIndex);
+  const raw = cell.value as any;
+
+  if (raw === null || raw === undefined) {
+    return "";
+  }
+
+  if (typeof raw === "string") {
+    return raw.trim();
+  }
+
+  if (typeof raw === "number" || typeof raw === "boolean") {
+    return String(raw).trim();
+  }
+
+  if (raw instanceof Date) {
+    return raw.toISOString();
+  }
+
+  if (typeof raw === "object") {
+    // Hyperlink value: { text, hyperlink }
+    if (typeof raw.text === "string") {
+      return raw.text.trim();
+    }
+    // Some sheets store only hyperlink in object form
+    if (typeof raw.hyperlink === "string") {
+      return raw.hyperlink.trim();
+    }
+    // Rich text value: { richText: [{ text: "..." }] }
+    if (Array.isArray(raw.richText)) {
+      const merged = raw.richText.map((item: any) => item?.text ?? "").join("");
+      return String(merged).trim();
+    }
+  }
+
+  return String(cell.text ?? "").trim();
+};
+
 export class VocabService {
   /**
    * Lấy danh sách các bộ từ vựng (Hệ thống hoặc User Public)
@@ -105,16 +144,22 @@ export class VocabService {
     // Phép bóc tách đơn giản (Word, Definition, Type, Pronunciation, Example, ImageURL)
     worksheet.eachRow((row, rowNum) => {
       if (rowNum > 1) { // Bỏ qua header
-        const word = row.getCell(1).text?.trim();
-        const def = row.getCell(2).text?.trim();
+        const word = normalizeExcelCellText(row, 1);
+        const def = normalizeExcelCellText(row, 2);
         if (word && def) {
+          const imageUrl = normalizeExcelCellText(row, 6) || null;
+
+          if (imageUrl && !isHttpUrl(imageUrl)) {
+            throw new Error(`Dòng ${rowNum}: URL ảnh không hợp lệ (chỉ chấp nhận HTTP/HTTPS).`);
+          }
+
           cards.push({
             word,
             definition: def,
-            word_type: row.getCell(3).text?.trim() || null,
-            pronunciation: row.getCell(4).text?.trim() || null,
-            example: row.getCell(5).text?.trim() || null,
-            image_url: row.getCell(6).text?.trim() || null,
+            word_type: normalizeExcelCellText(row, 3) || null,
+            pronunciation: normalizeExcelCellText(row, 4) || null,
+            example: normalizeExcelCellText(row, 5) || null,
+            image_url: imageUrl,
           });
         }
       }
