@@ -9,6 +9,7 @@ export function LoginPage() {
     password: ADMIN_ACCOUNTS[0].password,
   });
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const helperText = useMemo(
     () =>
@@ -26,6 +27,7 @@ export function LoginPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setIsLoading(true);
     setError("");
 
     try {
@@ -52,6 +54,8 @@ export function LoginPage() {
       navigate("/admin/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Có lỗi xảy ra khi đăng nhập.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -94,8 +98,8 @@ export function LoginPage() {
                 onChange={handleChange}
               />
 
-              <button className="login-button" type="submit">
-                Login
+              <button className="login-button" type="submit" disabled={isLoading}>
+                {isLoading ? "Logging in..." : "Login"}
               </button>
 
               <p className="login-helper">{helperText}</p>

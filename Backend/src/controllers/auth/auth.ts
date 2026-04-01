@@ -46,9 +46,7 @@ async function sendOtpNotification(userEmail: string, otp: string) {
   }
 }
 
-// ==========================================
 // ĐĂNG KÝ USER (SIGNUP)
-// ==========================================
 export const signup = async (req: Request, res: Response) => {
   try {
     const { email, password, confirmPassword, name } = req.body;
@@ -178,7 +176,12 @@ export const loginUser = async (req: Request, res: Response) => {
     );
 
     const refreshToken = jwt.sign(
-      { email: currentUser.email, userId: currentUser.id, role: "USER" },
+      { 
+        email: currentUser.email, 
+        userId: currentUser.id, 
+        role: "USER",
+        jti: crypto.randomBytes(16).toString("hex") 
+      },
       process.env.JWT_REFRESH_SECRET as string,
       { expiresIn: "7d" },
     );
@@ -284,6 +287,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
         email: currentAdmin.email,
         adminId: currentAdmin.id,
         role: currentAdmin.role,
+        jti: crypto.randomBytes(16).toString("hex"),
       },
       process.env.JWT_REFRESH_SECRET as string,
       { expiresIn: "7d" },
@@ -425,7 +429,7 @@ export const logoutUser = async (req: Request, res: Response) => {
         .delete({
           where: { token: currentRefreshToken },
         })
-        .catch(() => {});
+        .catch(() => { });
     }
 
     res.clearCookie("jwt");
@@ -454,7 +458,7 @@ export const logoutAdmin = async (req: Request, res: Response) => {
         .delete({
           where: { token: currentRefreshToken },
         })
-        .catch(() => {});
+        .catch(() => { });
     }
 
     res.clearCookie("jwt");

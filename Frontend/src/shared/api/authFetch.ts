@@ -36,10 +36,10 @@ export async function authFetch(input: RequestInfo | URL, init?: RequestInit): P
   // Nếu gặp lỗi 401 (Hết hạn token)
   if (response.status === 401) {
     const refreshToken = await getRefreshToken();
-    
+
     // Nếu không có refresh token thì buộc đăng xuất
     if (!refreshToken) {
-      return response; 
+      return response;
     }
 
     if (!isRefreshing) {
@@ -58,7 +58,7 @@ export async function authFetch(input: RequestInfo | URL, init?: RequestInit): P
         if (refreshRes.status === 200 && refreshData.accessToken) {
           const newAccessToken = refreshData.accessToken;
           await saveAuthTokens(newAccessToken);
-          
+
           isRefreshing = false;
           onTokenRefreshed(newAccessToken);
         } else {

@@ -55,6 +55,12 @@
     border-color: var(--brand);
     box-shadow: 0 0 0 3px rgba(101, 183, 206, 0.16);
   }
+
+  .import-input.invalid-input,
+  .import-textarea.invalid-input {
+    border-color: #ffb3b3;
+    background-color: #fffcfc;
+  }
   
   .import-textarea {
     min-height: 86px;
