@@ -43,7 +43,7 @@ export function ExamQuestionDetailScreen({ navigation, route }: any) {
       .finally(() => setLoading(false));
   }, [examId, sessionId, questionId]);
 
-  const audioUrl = detail?.question?.audio_url ?? null;
+  const audioUrl = detail?.question?.media?.audio_url || detail?.question?.audio_url || null;
 
   useEffect(() => {
     let isMounted = true;
@@ -157,9 +157,14 @@ export function ExamQuestionDetailScreen({ navigation, route }: any) {
   }
 
   const question = detail.question;
+  const media = detail.question.media || {};
   const questionImages = Array.isArray(question.image_urls)
     ? question.image_urls.slice(0, 3)
-    : splitPipeSeparatedImages(question.image_url);
+    : splitPipeSeparatedImages(question.image_url || media.image_url);
+  
+  const transcript = question.transcript || media.transcript;
+  const passageText = media.passage_text;
+  
   const aiExplanation =
     detail.ai_explanation
     || question.ai_explanation
@@ -211,6 +216,13 @@ export function ExamQuestionDetailScreen({ navigation, route }: any) {
           </View>
         ) : null}
 
+        {passageText ? (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionLabel}>Đoạn văn (Passage)</Text>
+            <Text style={styles.transcriptText}>{passageText}</Text>
+          </View>
+        ) : null}
+
         {audioUrl ? (
           <View style={styles.sectionCard}>
             <Text style={styles.sectionLabel}>Audio</Text>
@@ -235,59 +247,60 @@ export function ExamQuestionDetailScreen({ navigation, route }: any) {
           </View>
         ) : null}
 
-        {question.transcript ? (
+        {transcript ? (
           <View style={styles.sectionCard}>
             <Text style={styles.sectionLabel}>Transcript</Text>
-            <Text style={styles.transcriptText}>{question.transcript}</Text>
+            <Text style={styles.transcriptText}>{transcript}</Text>
           </View>
         ) : null}
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionLabel}>Đáp án</Text>
-          {question.answers.map((answer: any) => {
-            const isCorrect = answer.is_correct;
-            const isSelected = answer.is_selected;
-            const cardStyle = [
-              styles.answerRow,
-              isCorrect && styles.answerCorrect,
-              isSelected && !isCorrect && styles.answerWrong,
-              isSelected && isCorrect && styles.answerSelectedCorrect,
-            ];
+          <View style={{ gap: 12 }}>
+            {question.answers?.map((ans: any) => {
+              const isCorrect = ans.option_label === question.correct_answer;
+              const isSelected = ans.option_label === question.selected_option;
 
-            return (
-              <View key={answer.id} style={cardStyle}>
-                <Text style={styles.answerLabel}>{answer.option_label}</Text>
-                <Text style={styles.answerText}>{answer.content}</Text>
-                {isCorrect ? <Ionicons name="checkmark-circle" size={18} color="#1e8e3e" /> : null}
-                {isSelected && !isCorrect ? <Ionicons name="close-circle" size={18} color="#d93025" /> : null}
-              </View>
-            );
-          })}
+              return (
+                <View
+                  key={ans.id}
+                  style={[
+                    styles.answerRow,
+                    isCorrect && styles.answerCorrect,
+                    isSelected && !isCorrect && styles.answerWrong,
+                    isSelected && isCorrect && styles.answerSelectedCorrect,
+                  ]}
+                >
+                  <Text style={styles.answerLabel}>
+                    {ans.option_label}. {isSelected ? "(Bạn chọn)" : ""}
+                  </Text>
+                  <Text style={styles.answerText}>{ans.content}</Text>
+                  {isCorrect ? <Ionicons name="checkmark-circle" size={18} color="#1e8e3e" /> : null}
+                  {isSelected && !isCorrect ? <Ionicons name="close-circle" size={18} color="#d93025" /> : null}
+                </View>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionLabel}>Giải thích</Text>
-          {aiExplanation ? (
-            <Text style={styles.explanationText}>{aiExplanation}</Text>
-          ) : (
-            <View style={styles.blankBox} />
-          )}
+          <View style={styles.blankBox}>
+            {aiExplanation ? (
+              <Text style={styles.explanationText}>{aiExplanation}</Text>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionLabel}>Đáp án đúng</Text>
-          <Text style={styles.highlightText}>
-            {detail.correct_answer_text || question.correct_answer}
-          </Text>
+          <Text style={styles.highlightText}>{question.correct_answer}</Text>
         </View>
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionLabel}>Đáp án đã chọn</Text>
           <Text style={styles.highlightText}>
-            {detail.selected_answer_text
-              || detail.selected_answer_label
-              || question.selected_option
-              || "Chưa làm"}
+            {question.selected_option || "Chưa làm"}
           </Text>
         </View>
       </ScrollView>
