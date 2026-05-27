@@ -1,12 +1,9 @@
-/**
- * Spaced Review Controller
- * Route handlers for spaced repetition and review operations
- */
-
 import type { Request, Response } from 'express';
 import { parseUserId, parseCardId, normalizeRating } from '../../utils/flashcard/index.js';
 import * as SpacedRepetitionService from '../../services/flashcard/spaced-repetition.service.js';
 
+// Controller xử lý toàn bộ luồng ôn tập lặp lại ngắt quãng.
+// File này cung cấp API lấy thẻ đến hạn, chấm điểm, thống kê và luyện tập thêm.
 export const getDueReviewCards = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;
@@ -27,6 +24,7 @@ export const getDueReviewCards = async (req: Request, res: Response) => {
   }
 };
 
+// Nhận rating của người dùng cho một flashcard và cập nhật lịch ôn tương ứng.
 export const rateReviewCard = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;
@@ -59,6 +57,7 @@ export const rateReviewCard = async (req: Request, res: Response) => {
   }
 };
 
+// Thống kê số thẻ đã được ôn trong ngày hiện tại.
 export const getTodayReviewStats = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;
@@ -79,6 +78,7 @@ export const getTodayReviewStats = async (req: Request, res: Response) => {
   }
 };
 
+// Lấy danh sách thẻ luyện tập thêm ngoài danh sách đến hạn.
 export const getPracticeCards = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;

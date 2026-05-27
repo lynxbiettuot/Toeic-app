@@ -8,14 +8,12 @@ export interface NextSchedule {
   now: Date;
 }
 
-/**
- * Build next review schedule based on user rating
- * @param rating - User's rating: FORGOT | HARD | GOOD | EASY
- * @param previousEaseFactor - Previous ease factor (default 2.5)
- * @param previousIntervalDays - Previous interval (default 1)
- * @param previousRepetitions - Previous repetition count (default 0)
- * @returns Next schedule with updated parameters
- */
+// Tính lịch ôn tiếp theo theo thuật toán SM-2 dựa trên mức đánh giá của người dùng.
+// @param rating - User's rating: FORGOT | HARD | GOOD | EASY
+// @param previousEaseFactor - Previous ease factor (default 2.5)
+// @param previousIntervalDays - Previous interval (default 1)
+// @param previousRepetitions - Previous repetition count (default 0)
+// @returns Next schedule with updated parameters
 export const buildNextSchedule = (
   rating: ReviewRating,
   previousEaseFactor: number,

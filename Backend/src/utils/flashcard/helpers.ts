@@ -1,11 +1,9 @@
 import { prisma } from '../../lib/prisma.js';
 
-/**
- * Count how many flashcards are due for review
- * @param userId - User ID to check
- * @param now - Current date/time
- * @returns Count of due cards
- */
+// Đếm số flashcard đến hạn ôn của một user tại một thời điểm cụ thể.
+// @param userId - User ID to check
+// @param now - Current date/time
+// @returns Count of due cards
 export const countDueCards = async (userId: number, now: Date): Promise<number> => {
   return prisma.flashcards.count({
     where: {
@@ -33,10 +31,8 @@ export const countDueCards = async (userId: number, now: Date): Promise<number> 
   });
 };
 
-/**
- * Update card count in a flashcard set
- * @param setId - Set ID to update
- */
+// Cập nhật lại tổng số thẻ trong một bộ flashcard sau khi thêm/xóa card.
+// @param setId - Set ID to update
 export const updateCardCount = async (setId: number): Promise<void> => {
   const cardCount = await prisma.flashcards.count({
     where: { set_id: setId }
@@ -48,12 +44,10 @@ export const updateCardCount = async (setId: number): Promise<void> => {
   });
 };
 
-/**
- * Verify ownership of a flashcard set
- * @param setId - Set ID to check ownership
- * @param userId - User ID to verify
- * @returns Set data and error if ownership check fails
- */
+// Kiểm tra quyền sở hữu bộ flashcard trước khi cho phép sửa/xóa.
+// @param setId - Set ID to check ownership
+// @param userId - User ID to verify
+// @returns Set data and error if ownership check fails
 export const ensureOwnership = async (
   setId: number,
   userId: number

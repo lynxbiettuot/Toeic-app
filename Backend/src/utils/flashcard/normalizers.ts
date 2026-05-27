@@ -1,3 +1,4 @@
+// Các hàm chuẩn hóa dữ liệu đầu vào trước khi lưu vào CSDL hoặc gọi service.
 export type ReviewRating = 'FORGOT' | 'HARD' | 'GOOD' | 'EASY';
 export type VisibilityMode = 'PUBLIC' | 'PRIVATE';
 

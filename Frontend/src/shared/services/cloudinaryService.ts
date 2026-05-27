@@ -1,6 +1,4 @@
-/**
- * Dịch vụ hỗ trợ upload ảnh lên Cloudinary (Unsigned upload)
- */
+// Dịch vụ hỗ trợ upload ảnh lên Cloudinary (Unsigned upload)
 
 // Bạn có thể thay đổi các giá trị này theo cấu hình Cloudinary của mình
 const CLOUDINARY_URL = process.env.EXPO_PUBLIC_CLOUDINARY_URL;

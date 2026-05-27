@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma.js';
 import { ensureOwnership, updateCardCount } from '../../utils/flashcard/index.js';
 
+// Lấy danh sách flashcard trong một bộ nếu người dùng có quyền truy cập.
 export const getFlashcardsBySet = async (setId: number, userId: number) => {
   const { set, error } = await ensureOwnership(setId, userId);
 
@@ -16,6 +17,7 @@ export const getFlashcardsBySet = async (setId: number, userId: number) => {
   return { set, cards };
 };
 
+// Tạo flashcard mới trong bộ và đồng bộ lại số lượng thẻ của bộ.
 export const createFlashcard = async (
   setId: number,
   userId: number,
@@ -49,6 +51,7 @@ export const createFlashcard = async (
   return card;
 };
 
+// Cập nhật nội dung của flashcard hiện có sau khi kiểm tra quyền sở hữu bộ cha.
 export const updateFlashcard = async (
   cardId: number,
   userId: number,
@@ -87,6 +90,7 @@ export const updateFlashcard = async (
   });
 };
 
+// Xóa flashcard và cập nhật lại card_count của bộ chứa flashcard đó.
 export const deleteFlashcard = async (cardId: number, userId: number) => {
   const currentCard = await prisma.flashcards.findUnique({
     where: { id: cardId }

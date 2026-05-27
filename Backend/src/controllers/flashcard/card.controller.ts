@@ -1,7 +1,5 @@
-/**
- * Flashcard Card Controller
- * Route handlers for flashcard card operations
- */
+// Flashcard Card Controller.
+// Route handlers cho các thao tác CRUD trên flashcard trong một bộ.
 
 import type { Request, Response } from 'express';
 import {
@@ -17,6 +15,8 @@ import {
 } from '../../utils/flashcard/index.js';
 import * as FlashcardCardService from '../../services/flashcard/flashcard-card.service.js';
 
+// Controller xử lý các request CRUD cho từng flashcard trong một bộ.
+// Các hàm ở file này đều kiểm tra dữ liệu đầu vào trước khi gọi service.
 export const getFlashcardsBySet = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;
@@ -44,6 +44,7 @@ export const getFlashcardsBySet = async (req: Request, res: Response) => {
   }
 };
 
+// Thêm một flashcard mới vào bộ đã chọn.
 export const createFlashcard = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;
@@ -86,6 +87,7 @@ export const createFlashcard = async (req: Request, res: Response) => {
   }
 };
 
+// Cập nhật nội dung của một flashcard hiện có.
 export const updateFlashcard = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;
@@ -132,6 +134,7 @@ export const updateFlashcard = async (req: Request, res: Response) => {
   }
 };
 
+// Xóa flashcard khỏi bộ của người dùng.
 export const deleteFlashcard = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;

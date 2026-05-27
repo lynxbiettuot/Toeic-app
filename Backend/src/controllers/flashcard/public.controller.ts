@@ -1,12 +1,8 @@
-/**
- * Public Library Controller
- * Route handlers for public flashcard library operations
- */
-
 import type { Request, Response } from 'express';
 import { parseUserId, parseSetId, validateSearchQuery, validatePagination } from '../../utils/flashcard/index.js';
 import * as PublicLibraryService from '../../services/flashcard/public-library.service.js';
 
+// Controller xử lý thư viện flashcard công khai và thao tác import bộ công khai.
 export const getPublicFlashcardSets = async (req: Request, res: Response) => {
   try {
     const { page, limit } = validatePagination(req.query.page, req.query.limit);
@@ -25,6 +21,7 @@ export const getPublicFlashcardSets = async (req: Request, res: Response) => {
   }
 };
 
+// Lấy chi tiết một bộ flashcard công khai, bao gồm thông tin bộ và danh sách thẻ.
 export const getPublicFlashcardSetDetail = async (req: Request, res: Response) => {
   try {
     const setId = parseSetId(req.params.setId);
@@ -54,6 +51,7 @@ export const getPublicFlashcardSetDetail = async (req: Request, res: Response) =
   }
 };
 
+// Sao chép một bộ công khai vào thư viện cá nhân của người dùng hiện tại.
 export const importFlashcardSet = async (req: Request, res: Response) => {
   try {
     const sourceSetId = parseSetId(req.params.setId);

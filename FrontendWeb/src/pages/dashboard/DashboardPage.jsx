@@ -420,13 +420,18 @@ export function DashboardPage({ mode = "overview" }) {
                 </div>
 
                 <p className="detail-label">Thống kê cá nhân (xu hướng điểm)</p>
-                <div className="line-chart personal-line-chart">
-                  <svg viewBox="0 0 440 110" preserveAspectRatio="none">
-                    <polyline points={personalTrendPoints || "8,80 428,80"} />
-                  </svg>
-                  <div className="chart-axis axis-y" />
-                  <div className="chart-axis axis-x" />
-                </div>
+                {personalTrendPoints ? (
+                  <div className="line-chart personal-line-chart">
+                    <svg viewBox="0 0 440 110" preserveAspectRatio="none">
+                      <line x1="8" y1="10" x2="8" y2="90" className="line-axis" />
+                      <line x1="8" y1="90" x2="432" y2="90" className="line-axis" />
+                      <polyline className="line-path" points={personalTrendPoints} />
+                    </svg>
+                  </div>
+                ) : (
+                  <p className="empty-state">User chưa có dữ liệu điểm để hiển thị xu hướng.</p>
+                )}
+
 
                 <p className="detail-label">Kho flashcard cá nhân</p>
                 <div className="action-grid">

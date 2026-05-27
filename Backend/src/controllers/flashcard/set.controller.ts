@@ -1,8 +1,3 @@
-/**
- * Flashcard Set Controller
- * Route handlers for flashcard set operations
- */
-
 import type { Request, Response } from 'express';
 import {
   parseUserId,
@@ -13,6 +8,8 @@ import {
 } from '../../utils/flashcard/index.js';
 import * as FlashcardSetService from '../../services/flashcard/flashcard-set.service.js';
 
+// Controller xử lý toàn bộ request liên quan đến Flashcard Set.
+// File này nhận dữ liệu từ client, kiểm tra hợp lệ rồi gọi service để thao tác CSDL.
 export const getUserFlashcardSets = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;
@@ -29,6 +26,7 @@ export const getUserFlashcardSets = async (req: Request, res: Response) => {
   }
 };
 
+// Tạo mới một bộ flashcard cho người dùng đang đăng nhập.
 export const createFlashcardSet = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;
@@ -53,6 +51,7 @@ export const createFlashcardSet = async (req: Request, res: Response) => {
   }
 };
 
+// Cập nhật thông tin bộ flashcard theo setId, đồng thời kiểm tra quyền sở hữu.
 export const updateFlashcardSet = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;
@@ -87,6 +86,7 @@ export const updateFlashcardSet = async (req: Request, res: Response) => {
   }
 };
 
+// Xóa một bộ flashcard và các dữ liệu liên quan nếu người dùng có quyền.
 export const deleteFlashcardSet = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId ?? null;

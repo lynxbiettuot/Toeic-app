@@ -1,6 +1,7 @@
 import { getAccessToken, getRefreshToken, saveAuthTokens, clearAuthData } from '../storage/tokenStorage';
 import { API_BASE_URL } from '../../config/api';
 
+// Helper gọi API có gắn access token và tự refresh token khi backend trả 401.
 // Biến quản lý trạng thái làm mới token để tránh gọi nhiều lần
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];

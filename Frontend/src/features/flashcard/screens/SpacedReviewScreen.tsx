@@ -14,6 +14,7 @@ import { getDueReviewCards, getTodayReviewStats, rateReviewCard, getPracticeCard
 import { BottomNavbar, NavScreen } from '../../../shared/components/BottomNavbar';
 import type { ReviewFlashcard, ReviewRating } from '../types';
 
+// Màn hình ôn tập lặp lại ngắt quãng: hiển thị thẻ đến hạn, chấm rating và luyện tập thêm.
 type SpacedReviewScreenProps = {
   userId: number;
   onBackHome: () => void;
@@ -48,6 +49,7 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
     setFrontImageError(false);
   }, [activeCard?.id]);
 
+  // Xáo trộn danh sách flashcard để tạo chế độ luyện tập thêm ngẫu nhiên.
   const shuffleCards = (input: ReviewFlashcard[]) => {
     const cloned = [...input];
 
@@ -61,6 +63,7 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
     return cloned;
   };
 
+  // Sắp xếp thẻ đến hạn theo thời gian review gần nhất.
   const orderReviewByDuePriority = (input: ReviewFlashcard[]) => {
     const cloned = [...input];
 
@@ -76,6 +79,7 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
     });
   };
 
+  // Tải danh sách thẻ đến hạn và thống kê ôn tập của ngày hiện tại.
   const loadDueCards = async () => {
     setLoading(true);
 
@@ -103,6 +107,7 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
     loadDueCards();
   }, []);
 
+  // Ghi nhận rating của người dùng và cập nhật SRS hoặc chuyển sang thẻ kế tiếp.
   const handleRating = async (rating: ReviewRating) => {
     if (!activeCard) {
       return;
@@ -128,6 +133,7 @@ export function SpacedReviewScreen({ userId, onBackHome, onNavigate, onLogout }:
     }
   };
 
+  // Bật chế độ luyện tập thêm bằng cách lấy flashcard ngẫu nhiên từ backend.
   const startExtraPractice = async () => {
     setLoading(true);
     try {

@@ -1,7 +1,4 @@
-/**
- * Flashcard Controllers - centralized exports
- */
-
+// Flashcard Controllers - centralized exports.
 export * from './set.controller.js';
 export * from './card.controller.js';
 export * from './review.controller.js';

@@ -1,3 +1,4 @@
+// Kiểu dữ liệu phục vụ màn hình ôn tập lặp lại ngắt quãng.
 export type ReviewRating = 'FORGOT' | 'HARD' | 'GOOD' | 'EASY';
 
 export type ReviewFlashcard = {

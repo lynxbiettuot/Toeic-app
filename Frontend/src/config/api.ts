@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
+// Cấu hình base URL của backend để các service frontend gọi đúng server.
 type ExtraConfig = {
   API_BASE_URL?: string;
   API_PORT?: number | string;

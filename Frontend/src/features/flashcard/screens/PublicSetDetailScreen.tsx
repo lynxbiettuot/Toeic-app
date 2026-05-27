@@ -13,6 +13,7 @@ import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
 import { getPublicFlashcardSetDetail, importFlashcardSet } from '../services';
 import type { PublicFlashcardCard, PublicFlashcardSet } from '../types';
 
+// Màn hình xem chi tiết một bộ công khai và cho phép lưu bộ đó vào thư viện cá nhân.
 type PublicSetDetailScreenProps = {
   setId: number;
   userId: number;
@@ -32,6 +33,7 @@ export function PublicSetDetailScreen({
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  // Tải chi tiết bộ công khai và danh sách flashcard con.
   useEffect(() => {
     const loadDetail = async () => {
       try {
@@ -48,6 +50,7 @@ export function PublicSetDetailScreen({
     loadDetail();
   }, [setId]);
 
+  // Import bộ công khai hiện tại vào thư viện cá nhân.
   const handleImport = async () => {
     if (!set) return;
 

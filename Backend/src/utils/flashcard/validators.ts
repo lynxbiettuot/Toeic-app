@@ -1,3 +1,4 @@
+// Các hàm kiểm tra và chuẩn hóa dữ liệu đầu vào cho module flashcard.
 export const parseUserId = (value: unknown): number | null => {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {
