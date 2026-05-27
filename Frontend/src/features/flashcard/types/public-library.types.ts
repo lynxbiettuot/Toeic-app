@@ -1,5 +1,6 @@
 import type { PublicFlashcardCard } from './flashcard-card.types';
 
+// Kiểu dữ liệu cho danh sách public set, chi tiết public set và phân trang.
 export type PublicFlashcardSet = {
   id: number;
   title: string;

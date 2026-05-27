@@ -32,6 +32,7 @@ const normalizeReviewCard = (card: any): ReviewFlashcard => ({
   }
 });
 
+// Lấy danh sách flashcard đến hạn ôn từ backend.
 export const getDueReviewCards = async (userId: number): Promise<GetDueReviewCardsResponse> => {
   const response = await authFetch(buildUrl(`/flashcards/review/due?userId=${userId}`));
   const json = (await response.json()) as { data?: GetDueReviewCardsResponse; message?: string };
@@ -50,6 +51,7 @@ export const getDueReviewCards = async (userId: number): Promise<GetDueReviewCar
   };
 };
 
+// Gửi rating của người dùng để cập nhật lịch ôn tiếp theo.
 export const rateReviewCard = async (
   cardId: number,
   userId: number,
@@ -64,11 +66,13 @@ export const rateReviewCard = async (
   return parseJson<RateReviewCardResponse>(response);
 };
 
+// Lấy thống kê số flashcard đã ôn trong ngày.
 export const getTodayReviewStats = async (userId: number): Promise<ReviewTodayStats> => {
   const response = await authFetch(buildUrl(`/flashcards/review/stats/today?userId=${userId}`));
   return parseJson<ReviewTodayStats>(response);
 };
 
+// Lấy danh sách flashcard ngẫu nhiên để luyện tập thêm ngoài SRS.
 export const getPracticeCards = async (userId: number, limit: number = 50): Promise<ReviewFlashcard[]> => {
   try {
     const response = await authFetch(

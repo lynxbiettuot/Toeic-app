@@ -14,6 +14,7 @@ import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
 import { getPublicFlashcardSets } from '../services';
 import type { PublicFlashcardSet } from '../types';
 
+// Màn hình tìm kiếm và khám phá các bộ flashcard công khai.
 type DiscoveryScreenProps = {
   userId: number;
   embedded?: boolean;
@@ -30,6 +31,7 @@ export function DiscoveryScreen({ userId, embedded = false, onBack, onViewDetail
   const [hasMore, setHasMore] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  // Tải danh sách public set theo trang và từ khóa tìm kiếm.
   const loadSets = async (pageNum: number, searchQuery: string) => {
     if (pageNum === 1) setLoading(true);
 
@@ -53,12 +55,14 @@ export function DiscoveryScreen({ userId, embedded = false, onBack, onViewDetail
     loadSets(1, '');
   }, []);
 
+  // Áp dụng từ khóa tìm kiếm hiện tại và tải lại dữ liệu từ đầu.
   const handleApplySearch = () => {
     setSearchQuery(searchInput.trim());
     setPage(1);
     loadSets(1, searchInput.trim());
   };
 
+  // Xóa từ khóa tìm kiếm và tải lại toàn bộ danh sách.
   const handleClearSearch = () => {
     setSearchInput('');
     setSearchQuery('');
@@ -66,6 +70,7 @@ export function DiscoveryScreen({ userId, embedded = false, onBack, onViewDetail
     loadSets(1, '');
   };
 
+  // Tải thêm trang tiếp theo khi người dùng cuộn đến cuối danh sách.
   const handleLoadMore = () => {
     if (hasMore && !loading) {
       const nextPage = page + 1;

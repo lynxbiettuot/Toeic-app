@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma.js';
 import { ensureOwnership } from '../../utils/flashcard/index.js';
 
+// Trả về toàn bộ bộ flashcard thuộc về một người dùng.
 export const getUserFlashcardSets = async (userId: number) => {
   return prisma.flashcard_sets.findMany({
     where: {
@@ -10,6 +11,7 @@ export const getUserFlashcardSets = async (userId: number) => {
   });
 };
 
+// Tạo một bộ flashcard mới và gắn bộ đó với user đang đăng nhập.
 export const createFlashcardSet = async (
   userId: number,
   title: string,
@@ -28,6 +30,7 @@ export const createFlashcardSet = async (
   });
 };
 
+// Cập nhật thông tin bộ flashcard sau khi kiểm tra quyền sở hữu.
 export const updateFlashcardSet = async (
   setId: number,
   userId: number,
@@ -55,6 +58,7 @@ export const updateFlashcardSet = async (
   });
 };
 
+// Xóa bộ flashcard và toàn bộ dữ liệu phụ thuộc như thẻ, trạng thái SRS, review logs.
 export const deleteFlashcardSet = async (setId: number, userId: number) => {
   const { set, error } = await ensureOwnership(setId, userId);
 

@@ -10,6 +10,7 @@ export interface PublicSetData {
   savedCount: number;
 }
 
+// Lấy danh sách các bộ flashcard công khai để hiển thị ở màn hình khám phá.
 export const getPublicFlashcardSets = async (page: number, limit: number, search: string, currentUserId?: number) => {
   const skip = (page - 1) * limit;
   const whereClause: any = {
@@ -84,6 +85,7 @@ export const getPublicFlashcardSets = async (page: number, limit: number, search
   };
 };
 
+// Lấy chi tiết một bộ flashcard công khai, kèm danh sách flashcard bên trong.
 export const getPublicFlashcardSetDetail = async (setId: number) => {
   const set = await prisma.flashcard_sets.findFirst({
     where: { 
@@ -135,6 +137,7 @@ export const getPublicFlashcardSetDetail = async (setId: number) => {
   };
 };
 
+// Sao chép một bộ public thành bộ mới thuộc sở hữu của user hiện tại.
 export const importFlashcardSet = async (sourceSetId: number, userId: number) => {
   // Get source set
   const sourceSet = await prisma.flashcard_sets.findUnique({

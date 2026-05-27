@@ -1,3 +1,4 @@
+// Kiểu dữ liệu mô tả từng flashcard trong một bộ và dữ liệu card công khai.
 export type Flashcard = {
   id: number;
   set_id: number;

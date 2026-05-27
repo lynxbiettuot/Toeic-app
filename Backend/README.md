@@ -1,256 +1,182 @@
 # Backend TOEIC App
 
-> [!CAUTION]
-> **Lưu ý quan trọng (Git):** Nên tạo một nhánh phụ dưới local phân thân từ nhánh chính, sau đó pull về nhánh phụ để nếu migrate database thì nhánh chính ở local vẫn ổn. Ngoài ra cần commit cái lần chạy thành công hiện tại trước khi pull về để có thể roll back nếu có lỗi.
+Backend là API server của TOEIC App, chịu trách nhiệm cho các chức năng:
 
-## Các bước thiết lập ban đầu
+- xác thực người dùng và admin
+- quản lý đề thi TOEIC
+- quản lý flashcard và spaced repetition
+- lưu kết quả làm bài, lịch sử và thống kê
+- tích hợp Gemini để sinh giải thích cho câu hỏi reading
 
-### 1. Cài đặt Dependency
-**Đây là bước đầu tiên và bắt buộc.**
+## Công nghệ
+
+- `Node.js`
+- `Express 5`
+- `TypeScript`
+- `Prisma`
+- `MySQL/MariaDB`
+- `JWT`
+- `bcrypt`
+- `nodemailer`
+- `multer`
+- `@google/genai`
+
+## Cấu trúc chính
+
+- `src/app.ts`: điểm khởi động của server, gắn middleware và mount route.
+- `src/lib/prisma.ts`: khởi tạo Prisma Client.
+- `src/routes`: định nghĩa endpoint.
+- `src/controllers`: nhận request, validate dữ liệu, trả response.
+- `src/services`: xử lý nghiệp vụ chính.
+- `src/utils`: hàm dùng chung như validate, normalize, tính điểm, xử lý flashcard.
+- `prisma/schema.prisma`: schema CSDL.
+
+## Các module chính
+
+### 1. Authentication
+
+Hệ thống có 2 nhóm đăng nhập:
+
+- user
+- admin
+
+Ngoài ra còn có:
+
+- refresh token
+- quên mật khẩu bằng OTP
+- đổi mật khẩu
+
+### 2. Exam
+
+Backend quản lý:
+
+- danh sách đề thi
+- chi tiết đề thi
+- câu hỏi theo part
+- session làm bài
+- submit bài
+- xem lại đáp án và giải thích
+
+### 3. Flashcard và Spaced Repetition
+
+Backend hỗ trợ:
+
+- tạo và quản lý bộ flashcard
+- tạo/sửa/xóa flashcard trong bộ
+- xem bộ công khai
+- import bộ công khai vào thư viện cá nhân
+- lấy thẻ đến hạn ôn
+- chấm mức độ nhớ
+- tính lịch ôn theo SM-2
+- ghi review log và thống kê số lần ôn
+
+### 4. Gemini
+
+Gemini chỉ dùng để sinh phần giải thích ngắn cho câu reading. Backend lấy đáp án đúng từ CSDL trước, rồi mới gửi dữ liệu phù hợp sang Gemini để sinh explanation.
+
+## Cài đặt
+
+### 1. Cài dependency
+
+Chạy trong thư mục `Backend`:
+
 ```bash
 npm install
 ```
 
-### 2. Cấu hình Biến môi trường (.env)
-Sao chép file `.env.example` thành `.env` và điền đầy đủ thông tin:
+### 2. Tạo file môi trường
+
+Trên Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Sau đó cấu hình các biến cần thiết.
+
+| Biến | Ý nghĩa |
+|---|---|
+| `DATABASE_HOST` | Host MySQL/MariaDB |
+| `DATABASE_PORT` | Port database |
+| `DATABASE_USER` | Username database |
+| `DATABASE_PASSWORD` | Mật khẩu database |
+| `DATABASE_NAME` | Tên database |
+| `JWT_ACCESS_SECRET` | Secret cho access token |
+| `JWT_REFRESH_SECRET` | Secret cho refresh token |
+| `EMAIL_USER` | Email gửi OTP |
+| `EMAIL_PASS` | App password của email |
+| `GEMINI_API_KEY` | API key của Gemini |
+
+### 3. Khởi tạo database
+
+Chạy migration và generate Prisma Client:
+
 ```bash
-cp .env.example .env
+npx prisma migrate dev --name init
+npx prisma generate
 ```
 
-| Biến | Ý nghĩa | Giá trị mẫu / Cách lấy |
-| :--- | :--- | :--- |
-| `DATABASE_URL` | Chuỗi kết nối Prisma | `mysql://root:pass@localhost:3306/toeicapp` |
-| `DATABASE_HOST` | Host Database | `localhost` hoặc `127.0.0.1` |
-| `DATABASE_PORT` | Port MySQL | Mặc định: `3306` |
-| `DATABASE_USER` | Username MySQL | Mặc định: `root` |
-| `DATABASE_PASSWORD` | Mật khẩu MySQL | Mật khẩu của XAMPP/MySQL |
-| `DATABASE_NAME` | Tên Database | `toeicapp` |
-| `JWT_ACCESS_SECRET` | Khóa Access Token | Chuỗi ký tự ngẫu nhiên dài |
-| `JWT_REFRESH_SECRET` | Khóa Refresh Token | Chuỗi ký tự ngẫu nhiên khác |
-| `EMAIL_USER` | Email gửi OTP | Địa chỉ Gmail của bạn |
-| `EMAIL_PASS` | Mật khẩu ứng dụng | Lấy từ Google Account (App Password) |
-| `GEMINI_API_KEY` | Key AI Gemini | Lấy từ [Google AI Studio](https://aistudio.google.com/app/apikey) |
+### 4. Tạo tài khoản admin mặc định
 
-### 3. Khởi tạo Database (Prisma)
+Nếu cần tài khoản admin để đăng nhập web quản trị, có thể dùng script seed trong `src/scripts/upsertAdminAccounts.ts` hoặc tạo account trực tiếp trong database tùy workflow của bạn.
 
-> [!IMPORTANT]
-> **Migrate Database:** Bạn phải chạy lệnh này để đồng bộ cấu trúc bảng từ code vào MySQL của bạn.
-> ```bash
-> npx prisma migrate dev --name init
-> ```
-> Sau đó chạy lệnh để tạo Prisma Client:
-> ```bash
-> npx prisma generate
-> ```
+### 5. Chạy backend
 
-### 4. Tạo tài khoản Admin mặc định
-Vì hệ thống không còn dùng tài khoản admin fix cứng trong code, bạn cần chạy câu lệnh SQL sau trong **phpMyAdmin** (hoặc tool quản lý DB) để có tài khoản đăng nhập portal admin:
-
-*   **Tài khoản:** `admin@toeic.com`
-*   **Mật khẩu:** `admin123`
-
-```sql
-INSERT INTO admins (email, password_hash, full_name, role, is_active) 
-VALUES ('admin@toeic.com', '$2b$12$FO/nG/0mOp/hvbPhW0w/3.0Prvah9m0NtxhMH0UZwJnkR.kxd9joq', 'Admin', 'ADMIN', 1);
-```
-
-### 5. Chạy Backend
 ```bash
 npm start
 ```
 
-## Tổng quan
-Backend của TOEIC App được xây dựng bằng `Node.js`, `Express`, `TypeScript` và `Prisma`. Hệ thống hiện có các phần chính:
+## Lưu ý khi chạy
 
-- authentication cho user và admin
-- kết nối MySQL/MariaDB
-- gửi OTP qua email
-- quản lý refresh token
-- API đề thi, câu hỏi, session làm bài
-- tích hợp Gemini để sinh giải thích ngắn cho câu reading sau khi xem lại bài
+- Backend phải kết nối được database trước khi chạy frontend.
+- Một số API yêu cầu token hợp lệ.
+- Nếu đổi schema Prisma thì cần chạy lại migrate và generate.
+- `GEMINI_API_KEY` chỉ dùng ở backend, không đưa xuống frontend.
 
-## Công nghệ chính
-- `Express 5`: dựng API server
-- `Prisma + MariaDB adapter`: làm việc với database
-- `JWT`: tạo access token và refresh token
-- `bcrypt`: hash và so sánh mật khẩu
-- `nodemailer`: gửi OTP quên mật khẩu qua email
-- `cookie-parser` và `body-parser`: xử lý cookie và request body
-- `@google/genai`: gọi Gemini API từ backend
+## File nên đọc khi cần hiểu code
 
-## Cấu trúc thư mục chính
+- `src/routes/flashcard.routes.ts`
+- `src/controllers/flashcard/*`
+- `src/services/flashcard/*`
+- `src/utils/flashcard/*`
+- `prisma/schema.prisma`
 
-### `src/app.ts`
-Điểm khởi động của backend:
-- khởi tạo Express app
-- đăng ký middleware parse body và cookie
-- cấu hình CORS thủ công
-- mount các route chính
-- kết nối Prisma trước khi mở server
+## API tiêu biểu
 
-### `src/lib/prisma.ts`
-Khởi tạo `PrismaClient` thông qua `@prisma/adapter-mariadb`, đọc cấu hình kết nối từ biến môi trường:
-- `DATABASE_HOST`
-- `DATABASE_USER`
-- `DATABASE_PASSWORD`
-- `DATABASE_NAME`
+### Flashcard
 
-### `src/routes`
-Khai báo endpoint và nối endpoint vào controller.
+- `GET /flashcards/public`
+- `GET /flashcards/public/:setId`
+- `POST /flashcards/public/:setId/import`
+- `GET /flashcards/sets`
+- `POST /flashcards/sets`
+- `PUT /flashcards/sets/:setId`
+- `DELETE /flashcards/sets/:setId`
+- `GET /flashcards/sets/:setId/cards`
+- `POST /flashcards/sets/:setId/cards`
+- `PUT /flashcards/cards/:cardId`
+- `DELETE /flashcards/cards/:cardId`
 
-- `auth.routes.ts`: gom toàn bộ route auth dưới prefix `/auth`
-- `user/exam.ts`: route dành cho user xem đề, làm bài, xem lại câu hỏi
-- `admin/*`: route dành cho admin
+### Spaced Repetition
 
-### `src/controllers`
-Chứa logic xử lý nghiệp vụ.
+- `GET /flashcards/review/due`
+- `POST /flashcards/review/:cardId/rate`
+- `GET /flashcards/review/stats/today`
+- `GET /flashcards/practice`
 
-- `auth/auth.ts`: validate login/signup, tạo token, gửi OTP
-- `user/exam.ts`: xử lý xem đề, làm bài, xem lại session, và sinh explanation bằng Gemini
-- `admin/exam.ts`: import đề, quản lý câu hỏi, cập nhật exam
+### Exam và auth
 
-### `src/services/gemini.ts`
-Chứa logic tích hợp Gemini:
-- khởi tạo client Gemini
-- nhận `image_url`
-- `fetch` ảnh từ URL
-- convert ảnh sang `base64`
-- gửi ảnh + question + options + correct answer sang Gemini
-- trả explanation ngắn gọn về cho controller
-
-### `prisma/schema.prisma`
-Mô tả schema database. Ngoài auth, schema đã có sẵn các bảng cho:
-
-- `Users`, `Admins`
-- `Refresh_tokens`, `Admin_refresh_tokens`
-- `Exam_sets`, `Questions`, `Question_groups`, `Answer_options`
-- `Test_sessions`, `User_answers`, `Session_part_scores`
-- `Flashcard_sets`, `Flashcards`, `Spaced_repetition_cards`, `Flashcard_review_logs`, `User_saved_sets`
-
-## Luồng backend hiện tại
-
-### 1. Khởi động server
-1. Chạy lệnh `npm start`.
-2. `src/app.ts` tạo Express app.
-3. App nạp middleware parse JSON, form data và cookie.
-4. App cấu hình CORS.
-5. App kết nối database qua `prisma.$connect()`.
-6. Nếu kết nối thành công, server lắng nghe tại `PORT` hoặc mặc định `3000`.
-
-### 2. Luồng request tổng quát
-1. Client gửi request đến backend.
-2. Express nhận request và đi qua middleware chung.
-3. Route tương ứng được match trong `src/routes`.
-4. Controller validate dữ liệu đầu vào.
-5. Controller thao tác với database thông qua Prisma.
-6. Backend trả JSON response về client.
-
-## Tích hợp AI-Gemini
-
-Phần này dùng để sinh giải thích ngắn gọn cho câu hỏi reading sau khi người dùng đã nộp bài và mở lại chi tiết một câu.
-
-### Mục tiêu
-- Gemini không tự quyết định đáp án đúng.
-- Backend lấy đáp án đúng đã có sẵn trong database.
-- Gemini chỉ sinh phần giải thích ngắn dựa trên:
-  - ảnh câu hỏi từ `image_url`
-  - nội dung câu hỏi
-  - 4 đáp án A/B/C/D
-  - đáp án đúng trong DB
-  - đáp án người dùng đã chọn, nếu có
-
-### Luồng xử lý hiện tại
-1. User nộp bài xong.
-2. User bấm xem chi tiết một câu hỏi.
-3. Backend vào route chi tiết câu hỏi trong `src/controllers/user/exam.ts`.
-4. Nếu câu hỏi thuộc reading và `Questions.explanation` đang rỗng:
-   - backend `fetch` ảnh từ `image_url`
-   - convert ảnh sang `base64`
-   - gửi ảnh + question + options + correct answer sang Gemini
-   - nhận về explanation ngắn
-   - lưu lại vào `Questions.explanation`
-5. Những lần mở sau chỉ đọc lại từ DB nên nhanh hơn rất nhiều.
-
-### File liên quan
-- `src/services/gemini.ts`: khởi tạo Gemini client và hàm generate explanation.
-- `src/controllers/user/exam.ts`: cắm logic generate vào API xem chi tiết câu hỏi.
-
-### Biến môi trường cần có
-Thêm vào `Backend/.env`:
-
-```env
-GEMINI_API_KEY=your_api_key_here
-```
-
-Lưu ý:
-- Tên biến phải đúng chính tả là `GEMINI_API_KEY`.
-- Không nên commit file `.env` lên git.
-- API key chỉ nên dùng ở backend, không đưa xuống frontend.
-
-### Prompt/đầu ra nên giữ ngắn
-Mục tiêu của explanation là:
-- ngắn gọn
-- dễ hiểu
-- không cầu kỳ
-- không bịa thêm dữ liệu ngoài đề bài
-
-Backend hiện đang yêu cầu Gemini trả về một đoạn văn ngắn, khoảng 2-4 câu, nêu:
-- vì sao đáp án đúng là đúng
-- nếu người dùng chọn sai, thêm 1 câu rất ngắn nói vì sao đáp án đã chọn sai
-
-### Cấu hình nên giữ để tránh file rác build ra root
-Để TypeScript không sinh file `.js`, `.d.ts`, `.map` ngay cạnh source, backend đã cấu hình:
-
-- `tsconfig.json` có `outDir: "./dist"`
-- `include` chỉ lấy `src/**/*.ts` và `prisma.config.ts`
-- `exclude` `test-db.ts`, `dist`, `node_modules`
-
-Nhờ vậy:
-- File build sẽ nằm trong `Backend/dist`
-- Không còn sinh lẫn vào `Backend/src` hoặc `Backend/` root
-- `test-db.ts` chỉ là script test, không bị compile ra file build đi kèm
-
-### Cách chạy khi làm việc với Gemini
-```bash
-npm install
-npm start
-```
-
-Nếu cần kiểm tra compile:
-```bash
-npm exec tsc --noEmit
-```
-
-Lưu ý:
-- Trong project hiện tại vẫn có một số lỗi TypeScript cũ ở các module flashcard/dashboard, nên `tsc --noEmit` có thể báo lỗi không liên quan đến Gemini.
-- Luồng Gemini mới không tạo bảng mới trong database, chỉ dùng `Questions.explanation` để cache kết quả.
-
-## Một số endpoint tiêu biểu
-
-### API đề thi cho user
 - `GET /exams`
-- `GET /exams/:id`
-- `GET /exams/:id/questions`
 - `POST /exams/:id/sessions`
-- `POST /exams/:id/sessions/:sessionId/submit`
-- `GET /exams/:id/sessions/:sessionId/summary`
-- `GET /exams/:id/sessions/:sessionId/parts`
-- `GET /exams/:id/sessions/:sessionId/parts/:partNumber/questions`
-- `GET /exams/:id/sessions/:sessionId/questions/:questionId`
-
-### Auth
-- `POST /auth/signup`
 - `POST /auth/login/user`
 - `POST /auth/login/admin`
-- `POST /auth/logout/user`
-- `POST /auth/logout/admin`
 - `POST /auth/refresh-token`
-- `POST /auth/forgot-password/user`
-- `POST /auth/forgot-password/admin`
-- `POST /auth/reset-password/user`
-- `POST /auth/reset-password/admin`
 
-## Ghi chú thực hành
-- Nếu muốn file build gọn hơn nữa, chỉ chạy `tsx` trong dev và dùng `tsc` khi thực sự cần build.
-- Không nên đặt script test tạm ở root nếu không cần thiết. Nên đưa vào `src/scripts` hoặc `scripts/` để tránh lẫn với source chính.
-- Khi thêm tính năng AI mới, nên giữ logic gọi AI trong `src/services/` thay vì viết trực tiếp trong controller để dễ bảo trì.
+## Tóm tắt luồng xử lý
+
+1. Frontend gọi API.
+2. Route nhận request.
+3. Controller validate dữ liệu.
+4. Service xử lý nghiệp vụ.
+5. Prisma đọc/ghi CSDL.
+6. Backend trả JSON response.

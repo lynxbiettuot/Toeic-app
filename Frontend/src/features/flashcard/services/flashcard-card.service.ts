@@ -6,6 +6,7 @@ export interface GetFlashcardsBySetResponse {
   cards: Flashcard[];
 }
 
+// Lấy toàn bộ flashcard thuộc một bộ để hiển thị trong màn hình chi tiết.
 export const getFlashcardsBySet = async (
   setId: number,
   userId: number
@@ -24,6 +25,7 @@ export const getFlashcardsBySet = async (
   return json.data;
 };
 
+// Tạo mới một flashcard trong bộ hiện tại.
 export const createFlashcard = async (
   setId: number,
   userId: number,
@@ -45,6 +47,7 @@ export const createFlashcard = async (
   return parseJson<Flashcard>(response);
 };
 
+// Cập nhật nội dung của một flashcard đã tồn tại.
 export const updateFlashcard = async (
   cardId: number,
   userId: number,
@@ -66,6 +69,7 @@ export const updateFlashcard = async (
   return parseJson<Flashcard>(response);
 };
 
+// Xóa flashcard khỏi bộ hiện tại.
 export const deleteFlashcard = async (cardId: number, userId: number): Promise<void> => {
   const response = await authFetch(buildUrl(`/flashcards/cards/${cardId}?userId=${userId}`), {
     method: 'DELETE'

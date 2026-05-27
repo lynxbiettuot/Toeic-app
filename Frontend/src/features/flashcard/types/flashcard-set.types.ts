@@ -1,3 +1,4 @@
+// Kiểu dữ liệu mô tả một bộ flashcard trong thư viện cá nhân.
 export type VisibilityMode = 'PRIVATE' | 'PUBLIC';
 
 export type FlashcardSet = {

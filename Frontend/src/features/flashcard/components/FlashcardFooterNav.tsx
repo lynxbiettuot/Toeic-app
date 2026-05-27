@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { AUTH_ACTION_COLOR } from '../../auth/constants/theme';
 
+// Thanh điều hướng dưới dùng chung cho một số màn hình flashcard.
 type FlashcardFooterNavProps = {
   onGoHome: () => void;
 };

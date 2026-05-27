@@ -23,6 +23,7 @@ import { BottomNavbar, NavScreen } from '../../../shared/components/BottomNavbar
 import { DiscoveryScreen } from './DiscoveryScreen';
 import type { FlashcardSet, PublicFlashcardSet, VisibilityMode } from '../types';
 
+// Màn hình quản lý thư viện flashcard cá nhân và tab khám phá bộ công khai.
 type FlashcardLibraryScreenProps = {
   userId: number;
   defaultTab?: 'my' | 'discover';
@@ -68,6 +69,7 @@ export function FlashcardLibraryScreen({
 
   const modalTitle = useMemo(() => (editingSet ? 'Sửa bộ từ vựng' : 'Tạo list từ'), [editingSet]);
 
+  // Tải danh sách bộ flashcard của người dùng từ backend.
   const loadSets = async () => {
     setLoading(true);
 
@@ -86,6 +88,7 @@ export function FlashcardLibraryScreen({
     loadSets();
   }, []);
 
+  // Mở form tạo bộ flashcard mới.
   const openCreateModal = () => {
     setEditingSet(null);
     setFormState(EMPTY_FORM);
@@ -93,6 +96,7 @@ export function FlashcardLibraryScreen({
     setModalVisible(true);
   };
 
+  // Mở form chỉnh sửa bộ flashcard đang chọn.
   const openEditModal = (setItem: FlashcardSet) => {
     setEditingSet(setItem);
     setFormState({
@@ -104,6 +108,7 @@ export function FlashcardLibraryScreen({
     setModalVisible(true);
   };
 
+  // Đóng modal tạo/sửa bộ flashcard và xóa dữ liệu tạm trên form.
   const closeModal = () => {
     if (!submitting) {
       setModalVisible(false);
@@ -113,6 +118,7 @@ export function FlashcardLibraryScreen({
     }
   };
 
+  // Lưu bộ flashcard mới hoặc cập nhật bộ đang sửa.
   const saveSet = async () => {
     if (!formState.title.trim()) {
       setModalError('Tiêu đề bộ từ vựng không được để trống.');
@@ -146,6 +152,7 @@ export function FlashcardLibraryScreen({
     }
   };
 
+  // Hiển thị hộp thoại xác nhận trước khi xóa một bộ flashcard.
   const confirmDeleteSet = (setItem: FlashcardSet) => {
     Alert.alert(
       'Xác nhận xóa',

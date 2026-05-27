@@ -30,6 +30,9 @@ import {
   clearAuthData,
 } from '../shared/storage/tokenStorage';
 
+// File điều phối màn hình cấp ứng dụng.
+// Với module Flashcard, file này quyết định khi nào mở thư viện cá nhân, chi tiết bộ, khám phá bộ công khai,
+// chi tiết public set và màn hình ôn tập lặp lại ngắt quãng.
 type ScreenState =
   | 'loading'
   | 'auth'

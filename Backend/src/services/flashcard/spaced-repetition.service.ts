@@ -20,6 +20,7 @@ export interface ReviewCard {
   };
 }
 
+// Lấy danh sách flashcard đến hạn ôn của người dùng hiện tại.
 export const getDueReviewCards = async (userId: number) => {
   const now = new Date();
 
@@ -88,6 +89,7 @@ export const getDueReviewCards = async (userId: number) => {
   return { cards: formattedCards, dueCount, now };
 };
 
+// Chấm rating cho một flashcard và cập nhật trạng thái ôn tập theo SM-2.
 export const rateReviewCard = async (cardId: number, userId: number, rating: ReviewRating) => {
   const currentCard = await prisma.flashcards.findUnique({
     where: { id: cardId },
@@ -170,6 +172,7 @@ export const rateReviewCard = async (cardId: number, userId: number, rating: Rev
   };
 };
 
+// Đếm số flashcard đã được ôn trong ngày hiện tại.
 export const getTodayReviewStats = async (userId: number) => {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -188,6 +191,7 @@ export const getTodayReviewStats = async (userId: number) => {
   return { reviewedCount, startOfDay, endOfDay };
 };
 
+// Lấy một tập flashcard ngẫu nhiên để người dùng luyện tập thêm ngoài lịch SRS.
 export const getPracticeCards = async (userId: number, limit: number) => {
   const randomCards = await prisma.$queryRaw`
     SELECT c.*, s.title as set_title

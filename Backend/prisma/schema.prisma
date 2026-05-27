@@ -1,7 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
   provider = "prisma-client"
@@ -186,6 +182,8 @@ model User_answers {
   @@map("User_answers")
 }
 
+// Lưu thông tin các bộ flashcard do user hoặc admin tạo ra.
+// Bảng này là bảng gốc của module Flashcard, chứa metadata của từng bộ từ vựng.
 model Flashcard_sets {
   id                    Int      @id @default(autoincrement())
   owner_user_id         Int?
@@ -200,18 +198,20 @@ model Flashcard_sets {
   created_at            DateTime @default(now())
   updated_at            DateTime?
   deleted_at            DateTime?
-//   warned_at             DateTime?
 
+  // Quan hệ tới chủ sở hữu là user hoặc admin.
   user               Users?  @relation(fields: [owner_user_id], references: [id])
   admin              Admins? @relation(fields: [owner_admin_id], references: [id])
+  // Danh sách flashcard thuộc bộ này.
   flashcards         Flashcards[]
+  // Danh sách người dùng đã lưu bộ public này.
   saved_by           User_saved_sets[]
-//   imported_from_set  Flashcard_sets? @relation("ImportedFrom", fields: [imported_from_set_id], references: [id])
-//   imported_sets      Flashcard_sets[] @relation("ImportedFrom")
 
   @@map("Flashcard_sets")
 }
 
+// Lưu từng flashcard thuộc một bộ flashcard cụ thể.
+// Bảng này chứa nội dung học trực tiếp của người dùng.
 model Flashcards {
   id            Int      @id @default(autoincrement())
   set_id        Int
@@ -225,13 +225,18 @@ model Flashcards {
   created_at    DateTime @default(now())
   updated_at    DateTime?
 
+  // Flashcard luôn thuộc về một bộ.
   set        Flashcard_sets            @relation(fields: [set_id], references: [id])
+  // Trạng thái SRS của flashcard theo từng user.
   spaced     Spaced_repetition_cards[]
+  // Lịch sử các lần ôn tập của flashcard.
   logs       Flashcard_review_logs[]
 
   @@map("Flashcards")
 }
 
+// Lưu trạng thái ôn tập lặp lại ngắt quãng theo từng user và từng flashcard.
+// Đây là bảng lõi của chức năng SRS.
 model Spaced_repetition_cards {
   id               Int      @id @default(autoincrement())
   user_id          Int
@@ -243,13 +248,16 @@ model Spaced_repetition_cards {
   last_reviewed_at DateTime?
   last_rating      String?
 
+  // User đang sở hữu trạng thái ôn tập này.
   user      Users     @relation(fields: [user_id], references: [id])
+  // Flashcard tương ứng với trạng thái ôn tập.
   flashcard Flashcards @relation(fields: [flashcard_id], references: [id])
 
   @@unique([user_id, flashcard_id])
   @@map("Spaced_repetition_cards")
 }
 
+// Lưu lịch sử từng lần review để thống kê và theo dõi tiến trình học.
 model Flashcard_review_logs {
   id           Int      @id @default(autoincrement())
   user_id      Int
@@ -257,19 +265,24 @@ model Flashcard_review_logs {
   rating       String?
   reviewed_at  DateTime @default(now())
 
+  // Người dùng thực hiện ôn tập.
   user      Users     @relation(fields: [user_id], references: [id])
+  // Flashcard được ôn trong lần đó.
   flashcard Flashcards @relation(fields: [flashcard_id], references: [id])
 
   @@map("Flashcard_review_logs")
 }
 
+// Lưu các bộ flashcard công khai đã được user lưu hoặc import.
 model User_saved_sets {
   id       Int      @id @default(autoincrement())
   user_id  Int
   set_id   Int
   saved_at DateTime @default(now())
 
+  // User đã lưu bộ này.
   user Users          @relation(fields: [user_id], references: [id])
+  // Bộ flashcard được lưu/import.
   set  Flashcard_sets @relation(fields: [set_id], references: [id])
 
   @@unique([user_id, set_id])

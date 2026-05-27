@@ -25,6 +25,7 @@ import {
 import { FlashcardFooterNav } from '../components/FlashcardFooterNav';
 import type { Flashcard, FlashcardSet } from '../types';
 
+// Màn hình hiển thị chi tiết một bộ flashcard và cho phép thêm/sửa/xóa từng thẻ.
 type FlashcardSetDetailScreenProps = {
   userId: number;
   flashcardSet: FlashcardSet;
@@ -72,6 +73,7 @@ export function FlashcardSetDetailScreen({
   const previewImageUrl = useMemo(() => formState.imageUrl.trim(), [formState.imageUrl]);
   const hasPreviewImageUrl = /^https?:\/\//i.test(previewImageUrl);
 
+  // Tải danh sách flashcard thuộc bộ hiện tại.
   const loadCards = async () => {
     setLoading(true);
 
@@ -91,6 +93,7 @@ export function FlashcardSetDetailScreen({
     loadCards();
   }, [flashcardSet.id]);
 
+  // Mở modal để tạo flashcard mới.
   const openCreateModal = () => {
     setEditingCard(null);
     setFormState(EMPTY_FORM);
@@ -99,6 +102,7 @@ export function FlashcardSetDetailScreen({
     setModalVisible(true);
   };
 
+  // Mở modal để sửa flashcard đã chọn.
   const openEditModal = (card: Flashcard) => {
     setEditingCard(card);
     setFormState({
@@ -114,6 +118,7 @@ export function FlashcardSetDetailScreen({
     setModalVisible(true);
   };
 
+  // Đóng modal và xóa dữ liệu nhập tạm thời.
   const closeModal = () => {
     if (!submitting && !uploadingImage) {
       setModalVisible(false);
@@ -124,6 +129,7 @@ export function FlashcardSetDetailScreen({
     }
   };
 
+  // Upload ảnh flashcard lên Cloudinary rồi lưu URL trả về vào form.
   const uploadImageFromUri = async (imageUri: string) => {
     setUploadingImage(true);
 
@@ -142,6 +148,7 @@ export function FlashcardSetDetailScreen({
     }
   };
 
+  // Chọn ảnh từ thư viện thiết bị rồi upload lên Cloudinary.
   const pickImageFromLibraryAndUpload = async () => {
     setModalError(null);
 
@@ -167,6 +174,7 @@ export function FlashcardSetDetailScreen({
     await uploadImageFromUri(imageUri);
   };
 
+  // Lưu flashcard mới hoặc cập nhật flashcard hiện có.
   const saveCard = async () => {
     if (!formState.word.trim() || !formState.definition.trim()) {
       setModalError('Từ vựng và định nghĩa là bắt buộc.');
@@ -206,6 +214,7 @@ export function FlashcardSetDetailScreen({
     }
   };
 
+  // Xóa flashcard sau khi người dùng xác nhận.
   const confirmDeleteCard = (card: Flashcard) => {
     Alert.alert('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa flashcard này?', [
       { text: 'Hủy', style: 'cancel' },
