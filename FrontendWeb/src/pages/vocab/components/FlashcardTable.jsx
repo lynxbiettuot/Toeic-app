@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Bảng danh sách flashcard bên trong một bộ từ vựng.
 export function FlashcardTable({ 
   cards = [], 
   onViewCard 

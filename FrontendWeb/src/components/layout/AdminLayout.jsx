@@ -3,6 +3,7 @@ import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { getPageTitle } from '../../utils/helpers';
 import { NavButton } from '../common/NavButton';
 
+// Khung giao diện chính cho toàn bộ khu vực admin sau khi đăng nhập.
 export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -10,10 +11,12 @@ export function AdminLayout() {
   useEffect(() => {
     const token = localStorage.getItem("toeic_admin_token");
     if (!token) {
+      // Không có token thì đẩy về màn hình login.
       navigate("/login", { replace: true });
     }
   }, [navigate]);
 
+  // Xóa toàn bộ dữ liệu đăng nhập local và thoát về login.
   const handleLogout = () => {
     localStorage.removeItem("toeic_admin_token");
     localStorage.removeItem("toeic_admin_refresh_token");

@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Hiển thị một dòng label/value dùng chung trong các panel chi tiết.
 export function DetailRow({ label, value }) {
   return (
     <div className="detail-row">

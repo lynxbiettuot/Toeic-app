@@ -1,137 +1,149 @@
 # Frontend TOEIC Mobile
 
-> [!CAUTION]
-> **Lưu ý quan trọng (Git):** Nên tạo một nhánh phụ dưới local phân thân từ nhánh chính, sau đó pull về nhánh phụ để nếu migrate database thì nhánh chính ở local vẫn ổn. Ngoài ra cần commit cái lần chạy thành công hiện tại trước khi pull về để có thể roll back nếu có lỗi.
+Đây là ứng dụng mobile cho học viên TOEIC. Ứng dụng này tập trung vào:
 
-## Các bước thiết lập ban đầu
+- đăng nhập và quản lý phiên người dùng
+- học và ôn từ vựng bằng flashcard
+- public library và import bộ từ vựng
+- spaced repetition để ôn lại đúng thời điểm
+- xem đề thi, làm bài và xem kết quả
 
-### 1. Cài đặt Dependency
-**Đây là bước đầu tiên và bắt buộc.**
+## Công nghệ
+
+- `Expo`
+- `React Native`
+- `TypeScript`
+- `React Native Web`
+- `AsyncStorage`
+- `expo-image-picker`
+- `expo-av`
+
+## Kiến trúc thư mục
+
+- `src/bootstrap`: điều phối toàn bộ màn hình của app.
+- `src/features`: từng nhóm nghiệp vụ riêng như auth, exam, flashcard, user.
+- `src/shared`: phần dùng chung như storage, API helper, cloudinary.
+- `src/config`: cấu hình môi trường và base URL backend.
+
+### Phần flashcard nằm ở đâu?
+
+- `src/features/flashcard/screens`: các màn hình UI.
+- `src/features/flashcard/services`: hàm gọi API backend.
+- `src/features/flashcard/types`: kiểu dữ liệu cho set/card/review/public library.
+- `src/features/flashcard/components`: component dùng chung trong feature.
+
+## Chức năng chính
+
+### Flashcard
+
+- xem thư viện flashcard của tôi
+- tạo bộ flashcard mới
+- sửa và xóa bộ flashcard
+- xem danh sách thẻ trong một bộ
+- thêm, sửa, xóa flashcard
+
+### Public set
+
+- xem danh sách bộ từ công khai
+- xem chi tiết bộ công khai
+- lưu/import bộ public vào thư viện cá nhân
+
+### Spaced Repetition
+
+- lấy thẻ đến hạn ôn
+- lật thẻ để xem nghĩa
+- chấm rating `FORGOT/HARD/GOOD/EASY`
+- tự tính lịch ôn tiếp theo
+- luyện tập thêm ngoài danh sách đến hạn
+
+### Exam
+
+- xem danh sách đề thi
+- làm bài thi TOEIC
+- xem lại kết quả và câu hỏi đã làm
+
+## Cài đặt
+
+### 1. Cài dependency
+
+Chạy trong thư mục `Frontend`:
+
 ```bash
 npm install
 ```
 
-### 2. Cấu hình Biến môi trường (.env)
-Sao chép file `.env.example` thành `.env` và điền đầy đủ thông tin:
-```bash
-cp .env.example .env
+### 2. Tạo file môi trường
+
+Trên Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
-| Biến | Ý nghĩa | Cách cấu hình |
-| :--- | :--- | :--- |
-| `API_BASE_URL` | Địa chỉ Backend | 
-**Máy ảo (Android Studio):** `http://10.0.2.2:3000`
-**Máy thật (Expo Go):** `http://IP_LAN:3000` |
-| `API_PORT` | Port Backend | Mặc định: `3000` |
-| `EXPO_PUBLIC_CLOUDINARY_URL` | Cloudinary API | 
-`https://api.cloudinary.com/v1_1/YOUR_NAME/image/upload` |
-| `EXPO_PUBLIC_UPLOAD_PRESET` | Upload Preset | Lấy trong Settings Cloudinary (Unsigned) |
+### 3. Cấu hình `.env`
 
-### 3. Hướng dẫn lấy IP LAN (Cho máy thật)
-Nếu bạn chạy ứng dụng trên điện thoại thật bằng Expo Go, bạn cần dùng IP LAN của máy tính:
-1. Mở PowerShell/Command Prompt gõ: `ipconfig`.
-2. Tìm dòng `IPv4 Address` (ví dụ `192.168.1.5`).
-3. Điền vào `.env`: `API_BASE_URL=http://192.168.1.5:3000`.
+| Biến | Ý nghĩa | Giá trị mẫu |
+|---|---|---|
+| `API_BASE_URL` | Địa chỉ backend | `http://10.0.2.2:3000` trên Android Emulator hoặc `http://IP_LAN:3000` trên điện thoại thật |
+| `API_PORT` | Port backend | `3000` |
+| `EXPO_PUBLIC_CLOUDINARY_URL` | URL upload ảnh Cloudinary | `https://api.cloudinary.com/v1_1/YOUR_NAME/image/upload` |
+| `EXPO_PUBLIC_UPLOAD_PRESET` | Upload preset Cloudinary | preset unsigned |
 
-### 4. Cấu hình Cloudinary (Để đổi ảnh đại diện)
-1. Đăng ký [Cloudinary](https://cloudinary.com/).
-2. Lấy **Cloud Name** tại Dashboard.
-3. Vào **Settings -> Upload -> Add upload preset**.
-4. Chuyển **Signing Mode** sang **`Unsigned`**. Nhấn **Save**.
-5. Copy tên Preset vừa tạo và dán vào `EXPO_PUBLIC_UPLOAD_PRESET`.
+### 4. Chạy ứng dụng
 
-### 5. Khởi chạy Ứng dụng
+```bash
+npm start
+```
 
-Bạn có 2 câu lệnh chính để khởi chạy:
+Một số lệnh hữu ích khác:
 
-*   **Chạy thông thường:**
-    ```bash
-    npm start
-    ```
-*   **Chạy xóa Cache (Khuyên dùng khi sửa .env):**
-    ```bash
-    npx expo start -c
-    ```
-    *Lưu ý: Dùng `-c` (clear) để ép Expo đọc lại các thay đổi mới nhất từ file `.env` hoặc khi cấu hình không nhận.*
+```bash
+npm run android
+npm run ios
+npm run web
+```
 
----
+Nếu đổi `.env` mà app chưa nhận cấu hình mới, chạy:
 
-## Hướng dẫn xử lý khi bị "Treo" (Troubleshooting)
+```bash
+npx expo start -c
+```
 
-Nếu bạn quét mã QR hoặc mở máy ảo mà bị treo ở màn hình **"Reloading..."** hoặc **"Network request failed"**, hãy thử các bước sau:
+## Lưu ý khi chạy
 
-1.  **Nhấn phím `r`:** Tại cửa sổ Terminal đang chạy Expo, nhấn phím `r` để ép ứng dụng nạp lại mã nguồn.(thông thường treo là do còn cache cũ nên cứ chạy npx expo start -c là được, nếu không mới xuống dưới)
-2.  **Kiểm tra Tường lửa (Firewall):** Tắt tạm Windows Firewall vì nó có thể chặn cổng `8081` (của Expo) hoặc `3000` (của Backend).
-3.  **Dùng chế độ Tunnel (Cực kỳ hiệu quả khi mạng yếu/lỗi IP):**
-    Nếu lỗi IP LAN vẫn tiếp diễn, hãy dùng lệnh:
-    ```bash
-    npx expo start --tunnel
-    ```
-    Cách này sẽ tạo một đường ống bảo mật chạy qua internet, bỏ qua mọi rắc rối về mạng nội bộ.
+- Backend phải đang chạy trước khi mở app mobile.
+- Nếu test trên điện thoại thật, `API_BASE_URL` phải trỏ tới IP LAN của máy đang chạy backend.
+- Nếu upload ảnh flashcard, cần cấu hình đúng Cloudinary.
+- Ứng dụng dùng token lưu local để duy trì đăng nhập.
 
----
+## Cấu trúc màn hình chính
 
-- Nhấn **`a`** để mở trên **Máy ảo (Android Studio)**.
-- Quét mã QR bằng ứng dụng **Expo Go** trên điện thoại để chạy **Máy thật**.
+- `AppEntry.tsx`: điều phối các màn hình như home, flashcard library, detail, discovery, public detail, spaced review.
+- `FlashcardLibraryScreen.tsx`: danh sách bộ thẻ cá nhân và tab khám phá.
+- `FlashcardSetDetailScreen.tsx`: danh sách flashcard trong bộ và form tạo/sửa/xóa.
+- `DiscoveryScreen.tsx`: màn hình tìm kiếm bộ công khai.
+- `PublicSetDetailScreen.tsx`: chi tiết bộ public và nút import.
+- `SpacedReviewScreen.tsx`: màn hình ôn tập theo SRS.
 
-## Cách để thấy frontend trên Expo Go
+## Dữ liệu và API
 
-Project này đã có logic tự suy ra địa chỉ backend từ mạng nội bộ trong file `src/config/api.ts`. Tuy nhiên để ổn định nhất khi chạy trên điện thoại thật, nên cấu hình rõ trong `.env`.
+Frontend gọi backend qua helper ở `src/shared/api/authFetch.ts`.
 
-Luồng hoạt động khi dùng Expo Go:
-1. Bạn chạy backend trên máy tính.
-2. Bạn chạy frontend bằng `npm start`.
-3. Expo phát app qua mạng nội bộ.
-4. Điện thoại mở app bằng `Expo Go`.
-5. Frontend đọc `API_BASE_URL` từ `app.config.js`.
-6. Frontend gọi API đến backend qua địa chỉ dạng `http://IP_MAY_TINH:3000`.
-7. Giao diện mobile hiển thị trên điện thoại.
+Các service quan trọng:
 
-## Khi nào cần Android Studio
-Bạn chỉ cần Android Studio nếu:
-- muốn chạy máy ảo Android
-- muốn test sâu hơn với emulator
-- muốn build native hoặc debug các vấn đề đặc thù Android
+- `src/features/flashcard/services/flashcard-set.service.ts`
+- `src/features/flashcard/services/flashcard-card.service.ts`
+- `src/features/flashcard/services/public-library.service.ts`
+- `src/features/flashcard/services/spaced-review.service.ts`
 
-Nếu mục tiêu hiện tại chỉ là xem và test frontend mobile nhanh, `Expo Go` là đủ.
+## Khi nào cần đọc thêm file nào?
 
-## Tổng quan
-Đây là frontend mobile được xây dựng bằng `Expo + React Native`. Các file trong `src` được tổ chức theo từng nhóm chức năng để dễ quản lý, dễ mở rộng và tách riêng giao diện, logic và cấu hình.
+- Cấu hình backend: `src/config/api.ts`
+- Upload ảnh: `src/shared/services/cloudinaryService.ts`
+- Kiểu dữ liệu: `src/features/flashcard/types/*`
 
-## Cấu trúc thư mục trong `src`
+## Troubleshooting
 
-### `src/api`
-Chứa các phần liên quan đến việc làm việc với API hoặc các module giao tiếp với backend. Thư mục này phù hợp để đặt các client API dùng chung cho nhiều feature.
-
-### `src/bootstrap`
-Chứa phần khởi tạo app và điều phối luồng hiển thị chính của ứng dụng. Nơi này thường được dùng để quyết định màn hình đầu tiên, điều hướng ban đầu hoặc các bước setup cấp app.
-
-### `src/config`
-Chứa các cấu hình dùng chung cho frontend, ví dụ như địa chỉ API, biến môi trường hoặc các giá trị cấu hình cần dùng lại ở nhiều nơi.
-
-### `src/features`
-Đây là thư mục chính của project, chứa các nghiệp vụ lớn được tách theo từng tính năng. Mỗi feature thường tự quản lý màn hình, service, type, component và constant riêng của nó.
-
-#### `src/features/auth`
-Chứa toàn bộ những gì liên quan đến xác thực người dùng, ví dụ như đăng nhập, đăng ký, quên mật khẩu, OTP, giao diện auth, type auth và logic gọi API auth.
-
-#### `src/features/user`
-Chứa các màn hình và logic liên quan đến người dùng sau khi đăng nhập, ví dụ như trang chủ, thông tin học viên hoặc các chức năng học tập sau này.
-
-### `src/shared`
-Chứa các phần được dùng chung cho nhiều feature, không thuộc riêng một nghiệp vụ nào. Thư mục này phù hợp để đặt utility, helper, storage, component dùng chung hoặc các hàm hỗ trợ tái sử dụng.
-
-#### `src/shared/storage`
-Chứa logic lưu trữ dữ liệu local trên thiết bị, ví dụ token đăng nhập, trạng thái người dùng hoặc các dữ liệu cần giữ lại giữa các lần mở app.
-
-## Ý nghĩa tổ chức này
-- Giúp code dễ đọc và dễ tìm hơn.
-- Mỗi tính năng được tách riêng, dễ mở rộng về sau.
-- Giảm việc trộn lẫn giao diện, logic và cấu hình vào cùng một chỗ.
-- Dễ chuyển project sang cấu trúc lớn hơn khi app có nhiều màn hình hơn.
-
-## Định hướng khi mở rộng
-- Nếu thêm tính năng mới, nên tạo trong `src/features/<ten-feature>`.
-- Nếu một đoạn code dùng lại cho nhiều nơi, nên đưa vào `src/shared`.
-- Nếu liên quan đến cấu hình chung, đặt trong `src/config`.
-- Nếu liên quan đến giao tiếp backend dùng chung, đặt trong `src/api`.
+- Nếu gặp lỗi `Network request failed`, kiểm tra backend đã chạy và `API_BASE_URL` đúng chưa.
+- Nếu app trên Expo Go không thấy backend, thử lấy lại IP LAN và chạy lại với cache sạch.
+- Nếu ảnh flashcard không upload được, kiểm tra Cloudinary preset và URL.

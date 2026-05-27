@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_ACCOUNTS } from '../../api/apiClient';
 
+// Màn hình đăng nhập admin, sau khi thành công sẽ lưu token vào localStorage.
 export function LoginPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -19,18 +20,21 @@ export function LoginPage() {
     []
   );
 
+  // Cập nhật từng trường trong form và xóa thông báo lỗi cũ.
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
     setError("");
   };
 
+  // Gọi API đăng nhập admin trên backend và lưu access/refresh token nếu thành công.
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsLoading(true);
     setError("");
 
     try {
+      // Backend auth endpoint cho đăng nhập admin.
       const response = await fetch("http://localhost:3000/auth/login/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,7 +50,7 @@ export function LoginPage() {
         throw new Error(result.message || "Đăng nhập thất bại.");
       }
 
-      // Save token and admin info
+      // Lưu token và thông tin admin.
       localStorage.setItem("toeic_admin_token", result.accessToken);
       localStorage.setItem("toeic_admin_refresh_token", result.refreshToken || "");
       localStorage.setItem("toeic_admin_info", JSON.stringify(result.adminData || {}));

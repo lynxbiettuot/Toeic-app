@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetchJson, EXAM_API_BASE_URL } from '../../api/apiClient';
 
+// Trang tạo mới đề thi nhập thông tin cơ bản trước khi vào chi tiết.
 export function ExamCreatePage() {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
@@ -23,6 +24,7 @@ export function ExamCreatePage() {
 
     try {
       setIsSubmitting(true);
+      // Tạo exam draft mới trên backend.
       const result = await apiFetchJson(EXAM_API_BASE_URL, {
         method: "POST",
         body: JSON.stringify({

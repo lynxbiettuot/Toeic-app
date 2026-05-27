@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Form sửa từng flashcard riêng lẻ trong bộ từ vựng.
 export function FlashcardEditor({ 
   card, 
   readOnly, 

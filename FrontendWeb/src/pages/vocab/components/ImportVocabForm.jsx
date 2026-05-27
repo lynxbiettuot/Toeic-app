@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Form import bộ từ vựng từ file Excel/CSV.
 export function ImportVocabForm({ 
   importTitle, setImportTitle, 
   importDescription, setImportDescription, 

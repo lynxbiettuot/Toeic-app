@@ -2,12 +2,13 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { apiFetchJson, VOCAB_API_BASE_URL, VOCAB_STATUS_FILTERS, TABLE_PAGE_SIZE } from '../../api/apiClient';
 import { isHttpUrl } from '../../utils/helpers';
 
-// Sub-components
+// Các sub-component
 import { VocabSetTable } from './components/VocabSetTable';
 import { ManualCreateForm } from './components/ManualCreateForm';
 import { ImportVocabForm } from './components/ImportVocabForm';
 import { VocabDetailModal } from './components/VocabDetailModal';
 
+// Màn hình quản lý bộ từ vựng: danh sách, tạo mới, import và chỉnh sửa chi tiết.
 export function VocabManagementPage() {
   const [sets, setSets] = useState([]);
   const [search, setSearch] = useState("");
@@ -47,6 +48,7 @@ export function VocabManagementPage() {
     if (search.trim()) params.set("search", search.trim());
 
     try {
+      // Tải danh sách bộ từ vựng từ backend và lọc theo trạng thái trên UI.
       const result = await apiFetchJson(`${VOCAB_API_BASE_URL}?${params.toString()}`);
       const normalized = (result.data || []).filter((item) => !item.deleted_at);
 
@@ -84,6 +86,7 @@ export function VocabManagementPage() {
   const handleInlineStatusChange = async (setItem, nextDisplayStatus) => {
     const nextStatus = nextDisplayStatus === "PUBLIC" ? "PUBLISHED" : "HIDDEN";
     try {
+      // Cập nhật trạng thái public/private cho bộ từ vựng.
       await apiFetchJson(`${VOCAB_API_BASE_URL}/${setItem.id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status: nextStatus }),
@@ -119,6 +122,7 @@ export function VocabManagementPage() {
   const saveManualSet = async () => {
     if (!title.trim()) { setModalMessage("Nhập tiêu đề bộ từ vựng trước khi lưu."); return; }
     try {
+      // Lưu bộ từ vựng tạo thủ công lên backend.
       await apiFetchJson(VOCAB_API_BASE_URL, {
         method: "POST",
         body: JSON.stringify({
@@ -138,6 +142,7 @@ export function VocabManagementPage() {
   const loadSetDetail = async (setItem) => {
     try {
       setDetailLoading(true);
+      // Lấy chi tiết bộ từ vựng để sửa hoặc xem từng flashcard.
       const result = await apiFetchJson(`${VOCAB_API_BASE_URL}/${setItem.id}`);
       const detail = result.data;
       setSelectedSetId(detail.id);
@@ -173,6 +178,7 @@ export function VocabManagementPage() {
 
     try {
       setSavingDetail(true);
+      // Lưu các thay đổi của bộ từ vựng và danh sách flashcard.
       await apiFetchJson(`${VOCAB_API_BASE_URL}/${selectedSetId}`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -200,6 +206,7 @@ export function VocabManagementPage() {
     fd.append("title", importTitle || `Imported vocab ${new Date().toISOString().slice(0, 10)}`);
     fd.append("description", importDescription || "Imported by admin");
     try {
+      // Import file Excel/CSV vào backend bằng FormData.
       await apiFetchJson(`${VOCAB_API_BASE_URL}/import`, { method: "POST", body: fd });
       setModalMessage("");
       setPageMessage("Import thành công, bộ từ vựng đang ở trạng thái Private.");

@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Form tạo mới câu hỏi, dùng chung state draft trong ExamDetailPage.
 export function QuestionCreator({ 
   createDraft, 
   setCreateDraft, 

@@ -1,4 +1,4 @@
-// Constants for API URLs
+// Các base URL dùng chung cho tất cả API trong khu admin.
 export const API_ROOT = "http://localhost:3000/admin";
 export const EXAM_API_BASE_URL = `${API_ROOT}/exams`;
 export const DASHBOARD_API_BASE_URL = `${API_ROOT}/dashboard`;
@@ -31,23 +31,26 @@ export const ADMIN_ACCOUNTS = [
   },
 ];
 
-// Biến quản lý trạng thái làm mới token để tránh gọi nhiều lần
+// Biến cờ dùng để tránh gọi refresh token nhiều lần cùng lúc.
 let isRefreshing = false;
 let refreshSubscribers = [];
 
+// Gọi callback đã chờ để dùng token mới.
 function onTokenRefreshed(newAccessToken) {
   refreshSubscribers.map((cb) => cb(newAccessToken));
   refreshSubscribers = [];
 }
 
+// Lưu callback để retry request sau khi refresh thành công.
 function addRefreshSubscriber(cb) {
   refreshSubscribers.push(cb);
 }
 
+// Wrapper fetch JSON có gắn Bearer token và tự động refresh khi 401.
 export const apiFetchJson = async (url, options = {}) => {
   const token = localStorage.getItem("toeic_admin_token");
   
-  // Only set Content-Type to JSON if body is not FormData
+  // Chỉ set Content-Type = application/json khi body không phải FormData.
   const headers = {
     ...(options.headers || {}),
   };
@@ -66,7 +69,7 @@ export const apiFetchJson = async (url, options = {}) => {
   });
 
   if (!response.ok) {
-    // Nếu bị Unauthorized (401), có thể token đã hết hạn
+    // Nếu server trả 401 thì thử refresh token trước khi báo lỗi.
     if (response.status === 401 && !url.includes("/auth/login")) {
       const refreshToken = localStorage.getItem("toeic_admin_refresh_token");
       
@@ -80,6 +83,7 @@ export const apiFetchJson = async (url, options = {}) => {
         isRefreshing = true;
 
         try {
+          // Gọi API refresh token của backend để lấy access token mới.
           const refreshRes = await fetch("http://localhost:3000/auth/refresh-token", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -108,7 +112,7 @@ export const apiFetchJson = async (url, options = {}) => {
         }
       }
 
-      // Đợi refresh xong rồi thử lại request cũ
+      // Chờ refresh xong rồi retry request gốc bằng token mới.
       return new Promise((resolve) => {
         addRefreshSubscriber(async (newToken) => {
           const retryHeaders = {
@@ -125,7 +129,7 @@ export const apiFetchJson = async (url, options = {}) => {
       const errorResult = await response.json();
       errorMessage = errorResult?.message || errorMessage;
     } catch {
-      // ignore json parse error
+      // Bỏ qua lỗi parse JSON.
     }
 
     throw new Error(errorMessage);

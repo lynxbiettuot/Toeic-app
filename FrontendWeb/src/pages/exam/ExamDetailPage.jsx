@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetchJson, EXAM_API_BASE_URL } from '../../api/apiClient';
 
-// Common Components
+// Các component dùng chung
 import { QuestionList } from './components/QuestionList';
 import { QuestionViewer } from './components/QuestionViewer';
 import { QuestionEditor } from './components/QuestionEditor';
 import { QuestionCreator } from './components/QuestionCreator';
 
+// Trang chi tiết đề thi: xem câu hỏi, sửa nhanh và thêm câu mới.
 export function ExamDetailPage() {
   const { examSetId } = useParams();
   const [exam, setExam] = useState(null);
@@ -53,6 +54,7 @@ export function ExamDetailPage() {
     setError("");
 
     try {
+      // Lấy toàn bộ câu hỏi của một đề thi.
       const result = await apiFetchJson(`${EXAM_API_BASE_URL}/${examSetId}/questions`);
       setExam(result.data);
 
@@ -86,6 +88,7 @@ export function ExamDetailPage() {
       setLoadingQuestion(true);
 
       try {
+        // Lấy chi tiết câu hỏi đang được chọn.
         const result = await apiFetchJson(
           `${EXAM_API_BASE_URL}/${examSetId}/questions/${selectedQuestionNumber}`,
         );
@@ -138,6 +141,7 @@ export function ExamDetailPage() {
       setSaving(true);
       setSaveMessage("");
 
+      // Cập nhật câu hỏi hiện tại bằng payload tổng hợp.
       const payload = {
         part_number: Number.parseInt(editDraft.part_number, 10),
         content: editDraft.content,
@@ -194,6 +198,7 @@ export function ExamDetailPage() {
       setCreatingQuestion(true);
       setCreateMessage("");
 
+      // Tạo câu mới với question_number tiếp theo trong đề.
       const payload = {
         question_number: nextQuestionNumber,
         part_number: partNumber,

@@ -1,7 +1,9 @@
 import React from 'react';
 import { splitPipeSeparatedUrls } from '../../utils/helpers';
 
+// Hiển thị danh sách URL media, có thể preview ảnh hoặc audio.
 export function UrlDetailRow({ label, value, mediaType = "link" }) {
+  // Tách chuỗi URL nối bằng dấu | từ backend thành danh sách có thể render.
   const urls = splitPipeSeparatedUrls(value);
 
   return (

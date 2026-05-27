@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { apiFetchJson, EXAM_API_BASE_URL } from '../../api/apiClient';
 import { isHttpUrl } from '../../utils/helpers';
 
+// Trang import đề thi từ file Excel, có preview nhanh media trước khi upload.
 export function ImportExcelPage() {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
@@ -17,6 +18,7 @@ export function ImportExcelPage() {
   const [previewRows, setPreviewRows] = useState([]);
 
   const extractPreviewFromExcel = async (file) => {
+    // Đọc workbook và lấy dòng đầu tiên để kiểm tra nhanh URL media.
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array" });
     const firstSheetName = workbook.SheetNames?.[0];
@@ -115,6 +117,7 @@ export function ImportExcelPage() {
     formData.append("excelFile", excelFile);
 
     try {
+      // Gọi API import-excel của backend bằng FormData.
       const result = await apiFetchJson(`${EXAM_API_BASE_URL}/import-excel`, {
         method: "POST",
         body: formData,

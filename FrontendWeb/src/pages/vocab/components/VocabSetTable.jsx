@@ -1,6 +1,7 @@
 import React from 'react';
 import { PaginationControls } from '../../../components/common/PaginationControls';
 
+// Bảng danh sách các bộ từ vựng trong toàn hệ thống.
 export function VocabSetTable({ 
   sets = [], 
   loading, 
