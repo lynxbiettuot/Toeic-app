@@ -1,10 +1,10 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-// Layout
+// Phần layout
 import { AdminLayout } from "./components/layout/AdminLayout";
 
-// Pages
+// Các trang
 import { LoginPage } from "./pages/auth/LoginPage";
 import { DashboardPage } from "./pages/dashboard/DashboardPage";
 import { ExamListPage } from "./pages/exam/ExamListPage";
@@ -13,6 +13,7 @@ import { ImportExcelPage } from "./pages/exam/ImportExcelPage";
 import { ExamDetailPage } from "./pages/exam/ExamDetailPage";
 import { VocabManagementPage } from "./pages/vocab/VocabManagementPage";
 
+// Định nghĩa toàn bộ routing cho admin web.
 function App() {
   return (
     <Routes>

@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Hiển thị danh sách số câu và nút thêm câu mới trong một đề thi.
 export function QuestionList({ 
   questions = [], 
   selectedQuestionNumber, 

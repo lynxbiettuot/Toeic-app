@@ -1,10 +1,12 @@
 import React from 'react';
 
+// Component phân trang dùng chung cho bảng dữ liệu.
 export function PaginationControls({ currentPage, totalPages, onPageChange }) {
   if (totalPages <= 1) {
     return null;
   }
 
+  // Tạo danh sách số trang từ 1 đến tổng số trang.
   const pages = Array.from({ length: totalPages }, (_, index) => index + 1);
 
   return (

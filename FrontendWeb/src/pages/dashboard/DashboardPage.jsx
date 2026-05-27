@@ -5,6 +5,7 @@ import { DetailRow } from '../../components/common/DetailRow';
 import { UrlDetailRow } from '../../components/common/UrlDetailRow';
 import { PaginationControls } from '../../components/common/PaginationControls';
 
+// Dashboard admin, có 2 chế độ: overview và users.
 export function DashboardPage({ mode = "overview" }) {
   const isOverview = mode === "overview";
   const [range, setRange] = useState("month");
@@ -32,6 +33,7 @@ export function DashboardPage({ mode = "overview" }) {
   useEffect(() => {
     if (!isOverview) return;
 
+    // Tải thống kê tổng quan theo khoảng thời gian đang chọn.
     const loadOverview = async () => {
       try {
         setError("");
@@ -55,6 +57,7 @@ export function DashboardPage({ mode = "overview" }) {
 
     if (isOverview) return;
 
+    // Tải danh sách user khi đang ở chế độ quản lý người dùng.
     const loadUsers = async () => {
       try {
         setError("");
@@ -79,6 +82,7 @@ export function DashboardPage({ mode = "overview" }) {
       return;
     }
 
+    // Tải hồ sơ chi tiết của user khi chọn một dòng trong bảng.
     const loadProfile = async () => {
       try {
         setError("");
@@ -144,6 +148,7 @@ export function DashboardPage({ mode = "overview" }) {
       const token = localStorage.getItem("toeic_admin_token");
       const url = `${DASHBOARD_API_BASE_URL}/export?range=${range}`;
 
+      // Gọi API xuất CSV và tải file blob về máy.
       const response = await fetch(url, {
         headers: { "Authorization": token ? `Bearer ${token}` : "" }
       });
@@ -187,6 +192,7 @@ export function DashboardPage({ mode = "overview" }) {
   };
 
   const closeUserProfileModal = () => {
+    // Reset toàn bộ state của modal chi tiết user.
     setSelectedUserId(null);
     setSelectedUserSet(null);
     setSelectedSetWordId(null);
@@ -420,13 +426,17 @@ export function DashboardPage({ mode = "overview" }) {
                 </div>
 
                 <p className="detail-label">Thống kê cá nhân (xu hướng điểm)</p>
-                <div className="line-chart personal-line-chart">
-                  <svg viewBox="0 0 440 110" preserveAspectRatio="none">
-                    <polyline points={personalTrendPoints || "8,80 428,80"} />
-                  </svg>
-                  <div className="chart-axis axis-y" />
-                  <div className="chart-axis axis-x" />
-                </div>
+                {personalTrendPoints ? (
+                  <div className="line-chart personal-line-chart">
+                    <svg viewBox="0 0 440 110" preserveAspectRatio="none">
+                      <line x1="8" y1="10" x2="8" y2="90" className="line-axis" />
+                      <line x1="8" y1="90" x2="432" y2="90" className="line-axis" />
+                      <polyline className="line-path" points={personalTrendPoints} />
+                    </svg>
+                  </div>
+                ) : (
+                  <p className="empty-state">User chưa có dữ liệu điểm để hiển thị xu hướng.</p>
+                )}
 
                 <p className="detail-label">Kho flashcard cá nhân</p>
                 <div className="action-grid">

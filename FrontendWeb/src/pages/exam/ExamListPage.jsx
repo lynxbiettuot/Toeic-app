@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { apiFetchJson, EXAM_API_BASE_URL, EXAM_STATUS_FILTERS, TABLE_PAGE_SIZE } from '../../api/apiClient';
 import { PaginationControls } from '../../components/common/PaginationControls';
 
+// Màn danh sách đề thi và cho phép lọc, đổi trạng thái trực tiếp.
 export function ExamListPage() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +17,7 @@ export function ExamListPage() {
     setError("");
 
     try {
+      // Ghép query từ search và status để gọi API danh sách đề.
       const params = new URLSearchParams();
       const keyword = search.trim();
 
@@ -70,6 +72,7 @@ export function ExamListPage() {
     const nextStatus = nextDisplayStatus === "PUBLIC" ? "PUBLISHED" : "HIDDEN";
 
     try {
+      // Cập nhật trạng thái đề trực tiếp thông qua API backend.
       await apiFetchJson(`${EXAM_API_BASE_URL}/${exam.id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status: nextStatus }),

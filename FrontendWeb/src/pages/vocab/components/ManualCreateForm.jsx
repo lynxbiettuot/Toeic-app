@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Form tạo bộ từ vựng thủ công trước khi thêm từng flashcard.
 export function ManualCreateForm({ 
   title, setTitle, 
   description, setDescription, 

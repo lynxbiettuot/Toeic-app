@@ -1,3 +1,4 @@
+// Trả về tiêu đề trang admin phù hợp với path hiện tại.
 export function getPageTitle(pathname) {
   if (pathname === "/admin/dashboard") {
     return "Admin - Dashboard";
@@ -26,6 +27,7 @@ export function getPageTitle(pathname) {
   return "Admin - Quản lý đề thi";
 }
 
+// Chuẩn hóa trạng thái backend sang nhãn dễ đọc hơn trên UI.
 export function normalizeStatusLabel(status) {
   if (status === "DRAFT") {
     return "Nháp";
@@ -46,6 +48,7 @@ export function normalizeStatusLabel(status) {
   return status || "-";
 }
 
+// Tách chuỗi URL nối bằng dấu | thành mảng để render từng media item.
 export function splitPipeSeparatedUrls(value) {
   if (!value) {
     return [];
@@ -57,6 +60,7 @@ export function splitPipeSeparatedUrls(value) {
     .filter(Boolean);
 }
 
+// Kiểm tra một giá trị có phải URL http/https hợp lệ hay không.
 export function isHttpUrl(value) {
   if (!value) {
     return false;

@@ -2,6 +2,7 @@ import React from 'react';
 import { FlashcardTable } from './FlashcardTable';
 import { FlashcardEditor } from './FlashcardEditor';
 
+// Modal chi tiết bộ từ vựng, có thể xem danh sách, sửa tiêu đề và từng flashcard.
 export function VocabDetailModal({ 
   detailDraft, setDetailDraft, 
   readOnly, 

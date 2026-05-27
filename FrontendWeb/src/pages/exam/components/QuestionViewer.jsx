@@ -2,6 +2,7 @@ import React from 'react';
 import { DetailRow } from '../../../components/common/DetailRow';
 import { UrlDetailRow } from '../../../components/common/UrlDetailRow';
 
+// Khung xem chi tiết câu hỏi, gồm nội dung, media, transcript và đáp án.
 export function QuestionViewer({ 
   questionDetail, 
   loadingQuestion 

@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Form sửa nhanh câu hỏi hiện tại trong đề thi.
 export function QuestionEditor({ 
   editDraft, 
   setEditDraft, 
