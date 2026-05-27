@@ -9,11 +9,11 @@ export interface NextSchedule {
 }
 
 // Tính lịch ôn tiếp theo theo thuật toán SM-2 dựa trên mức đánh giá của người dùng.
-// @param rating - User's rating: FORGOT | HARD | GOOD | EASY
-// @param previousEaseFactor - Previous ease factor (default 2.5)
-// @param previousIntervalDays - Previous interval (default 1)
-// @param previousRepetitions - Previous repetition count (default 0)
-// @returns Next schedule with updated parameters
+// @param rating - Mức đánh giá của user: FORGOT | HARD | GOOD | EASY.
+// @param previousEaseFactor - Hệ số dễ nhớ trước đó (mặc định 2.5).
+// @param previousIntervalDays - Khoảng lặp trước đó (mặc định 1).
+// @param previousRepetitions - Số lần lặp trước đó (mặc định 0).
+// @returns Lịch ôn mới sau khi tính toán.
 export const buildNextSchedule = (
   rating: ReviewRating,
   previousEaseFactor: number,
@@ -28,21 +28,21 @@ export const buildNextSchedule = (
   let intervalDays = safeIntervalDays;
   let repetitions = safeRepetitions;
 
-  // FORGOT: Reset to beginning, reduce ease factor
+  // FORGOT: Reset về mốc ban đầu và giảm hệ số dễ nhớ.
   if (rating === 'FORGOT') {
     repetitions = 0;
     intervalDays = 1;
     easeFactor = Math.max(1.3, safeEaseFactor - 0.2);
   }
 
-  // HARD: Minimal progress, slightly reduce ease factor
+  // HARD: Tiến triển ít, giảm nhẹ hệ số dễ nhớ.
   if (rating === 'HARD') {
     repetitions = safeRepetitions + 1;
     intervalDays = safeRepetitions <= 1 ? 1 : Math.ceil(safeIntervalDays * 1.2);
     easeFactor = Math.max(1.3, safeEaseFactor - 0.15);
   }
 
-  // GOOD: Normal progression, keep ease factor
+  // GOOD: Tiến triển bình thường, giữ nguyên hệ số dễ nhớ.
   if (rating === 'GOOD') {
     repetitions = safeRepetitions + 1;
 
@@ -55,7 +55,7 @@ export const buildNextSchedule = (
     }
   }
 
-  // EASY: Fast progression, increase ease factor
+  // EASY: Tiến triển nhanh, tăng hệ số dễ nhớ.
   if (rating === 'EASY') {
     repetitions = safeRepetitions + 1;
     easeFactor = safeEaseFactor + 0.15;

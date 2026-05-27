@@ -11,7 +11,7 @@ const sanitizeImageUrlForDb = (value: string): string => {
     return "";
   }
 
-  // Try to shorten long tracking URLs first by dropping query/hash.
+  // Thử rút gọn URL dài bằng cách bỏ query/hash trước khi lưu vào CSDL.
   try {
     const url = new URL(normalized);
     url.search = "";
@@ -159,7 +159,7 @@ export class VocabService {
   }
 
   /**
-   * Import từ vựng từ Excel/CSV
+   * Import từ vựng từ Excel/CSV theo template của FrontendWeb.
    */
   static async importVocabFromExcel(buffer: Buffer, metadata: { title: string; description?: string; adminId?: number }) {
     const workbook = new ExcelJS.Workbook();
@@ -169,9 +169,9 @@ export class VocabService {
     if (!worksheet) throw new Error("File Excel không hợp lệ.");
 
     const cards: any[] = [];
-    // Phép bóc tách đơn giản (Word, Definition, Type, Pronunciation, Example, ImageURL)
+    // Bóc tách dữ liệu đơn giản theo cột Word, Definition, Type, Pronunciation, Example, ImageURL.
     worksheet.eachRow((row, rowNum) => {
-      if (rowNum > 1) { // Bỏ qua header
+      if (rowNum > 1) { // Bỏ qua hàng header.
         const word = normalizeExcelCellText(row, 1);
         const def = normalizeExcelCellText(row, 2);
         if (word && def) {
@@ -298,7 +298,7 @@ export class VocabService {
           }
         }
 
-        // 3. Cập nhật lại số lượng thẻ thực tế
+        // 3. Cập nhật lại số lượng thẻ thực tế.
         await tx.flashcard_sets.update({
           where: { id: setId },
           data: { card_count: cards.length }
@@ -310,7 +310,7 @@ export class VocabService {
   }
 
   /**
-   * Cập nhật trạng thái bộ từ vựng
+   * Cập nhật trạng thái bộ từ vựng theo thao tác admin.
    */
   static async updateStatus(setId: number, status: string) {
     const targetSet = await prisma.flashcard_sets.findUnique({
@@ -330,7 +330,7 @@ export class VocabService {
   }
 
   /**
-   * Xóa mềm bộ từ vựng
+   * Xóa mềm bộ từ vựng.
    */
   static async softDelete(setId: number) {
     return prisma.flashcard_sets.update({
@@ -343,7 +343,7 @@ export class VocabService {
   }
 
   /**
-   * Khôi phục bộ từ vựng đã xóa mềm
+   * Khôi phục bộ từ vựng đã xóa mềm.
    */
   static async restore(setId: number) {
     return prisma.flashcard_sets.update({
@@ -356,7 +356,7 @@ export class VocabService {
   }
 
   /**
-   * Cảnh báo User (Ẩn bộ từ vựng của User)
+   * Cảnh báo user và ẩn bộ từ vựng của user đó.
    */
   static async warnUserSet(setId: number) {
     const set = await prisma.flashcard_sets.findFirst({

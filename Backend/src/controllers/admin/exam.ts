@@ -3,7 +3,7 @@ import { ExamService } from "../../services/exam.service.js";
 import { parseIntParam, parseIntegerField } from "../../utils/params.utils.js";
 
 /**
- * Import đề thi từ Excel
+ * Import đề thi từ Excel cho màn quản trị đề thi TOEIC.
  */
 export const importExamFromExcel = async (req: Request, res: Response) => {
   if (!req.file) {
@@ -43,7 +43,7 @@ export const importExamFromExcel = async (req: Request, res: Response) => {
 };
 
 /**
- * Lấy danh sách đề thi (Admin)
+ * Lấy danh sách đề thi cho màn quản lý đề thi trong FrontendWeb.
  */
 export const getAdminExamList = async (req: Request, res: Response) => {
   try {
@@ -59,7 +59,7 @@ export const getAdminExamList = async (req: Request, res: Response) => {
 };
 
 /**
- * Láy danh sách câu hỏi cơ bản
+ * Lấy danh sách câu hỏi cơ bản để màn chi tiết đề hiển thị danh sách câu.
  */
 export const getExamQuestions = async (req: Request, res: Response) => {
   try {
@@ -74,7 +74,7 @@ export const getExamQuestions = async (req: Request, res: Response) => {
 };
 
 /**
- * Lấy chi tiết câu hỏi
+ * Lấy chi tiết câu hỏi để màn editor/preview trong FrontendWeb sử dụng.
  */
 export const getQuestionDetail = async (req: Request, res: Response) => {
   try {
@@ -90,7 +90,7 @@ export const getQuestionDetail = async (req: Request, res: Response) => {
 };
 
 /**
- * Tạo đề thi thủ công
+ * Tạo đề thi thủ công từ màn Thêm mới trong FrontendWeb.
  */
 export const createManualExam = async (req: Request, res: Response) => {
   try {
@@ -107,7 +107,7 @@ export const createManualExam = async (req: Request, res: Response) => {
 };
 
 /**
- * Cập nhật thông tin đề thi
+ * Cập nhật thông tin cơ bản của đề thi từ màn chi tiết.
  */
 export const updateExam = async (req: Request, res: Response) => {
   try {
@@ -127,7 +127,7 @@ export const updateExam = async (req: Request, res: Response) => {
 };
 
 /**
- * Cập nhật trạng thái đề thi
+ * Cập nhật trạng thái đề thi public/private/draft.
  */
 export const updateExamStatus = async (req: Request, res: Response) => {
   try {
@@ -141,7 +141,7 @@ export const updateExamStatus = async (req: Request, res: Response) => {
 };
 
 /**
- * Xóa mềm đề thi
+ * Xóa mềm đề thi để admin có thể khôi phục sau này.
  */
 export const softDeleteExam = async (req: Request, res: Response) => {
   try {
@@ -155,7 +155,7 @@ export const softDeleteExam = async (req: Request, res: Response) => {
 };
 
 /**
- * Khôi phục đề thi
+ * Khôi phục đề thi đã xóa mềm.
  */
 export const restoreExam = async (req: Request, res: Response) => {
   try {
@@ -169,7 +169,7 @@ export const restoreExam = async (req: Request, res: Response) => {
 };
 
 /**
- * Thêm câu hỏi
+ * Thêm câu hỏi mới vào đề thi đang mở trong màn chi tiết.
  */
 export const createQuestion = async (req: Request, res: Response) => {
   try {
@@ -190,7 +190,7 @@ export const createQuestion = async (req: Request, res: Response) => {
 };
 
 /**
- * Cập nhật chi tiết câu hỏi
+ * Cập nhật chi tiết câu hỏi từ form chỉnh sửa trong FrontendWeb.
  */
 export const updateQuestionDetail = async (req: Request, res: Response) => {
   try {

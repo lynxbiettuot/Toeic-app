@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma.js";
 
 // ==========================================
-// UTILITY FUNCTIONS
+// CÁC HÀM TIỆN ÍCH
 // ==========================================
 const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -52,7 +52,7 @@ export const signup = async (req: Request, res: Response) => {
     const { email, password, confirmPassword, name } = req.body;
     console.log(req.body)
 
-    // Validate input
+    // Kiểm tra dữ liệu đầu vào.
     if (!email || !password || !confirmPassword || !name) {
       return res.status(400).json({
         message: "All fields are required",
@@ -352,7 +352,7 @@ export const getAccessToken = async (req: Request, res: Response) => {
 
       // Kiểm tra xem là User hay Admin dựa trên userId hay adminId
       if (decoded.userId) {
-        // User refresh token
+        // Refresh token của user.
         const tokenInDb = await prisma.refresh_tokens.findUnique({
           where: { token: currentRefreshToken },
         });
@@ -375,7 +375,7 @@ export const getAccessToken = async (req: Request, res: Response) => {
           statusCode: 200,
         });
       } else if (decoded.adminId) {
-        // Admin refresh token
+        // Refresh token của admin.
         const tokenInDb = await prisma.admin_refresh_tokens.findUnique({
           where: { token: currentRefreshToken },
         });
@@ -418,7 +418,7 @@ export const getAccessToken = async (req: Request, res: Response) => {
 };
 
 // ==========================================
-// LOGOUT USER
+// ĐĂNG XUẤT USER
 // ==========================================
 export const logoutUser = async (req: Request, res: Response) => {
   try {
@@ -447,7 +447,7 @@ export const logoutUser = async (req: Request, res: Response) => {
 };
 
 // ==========================================
-// LOGOUT ADMIN
+// ĐĂNG XUẤT ADMIN
 // ==========================================
 export const logoutAdmin = async (req: Request, res: Response) => {
   try {
@@ -578,7 +578,7 @@ export const handleSendOtpAdmin = async (req: Request, res: Response) => {
 };
 
 // ==========================================
-// XÁC THỰC OTP & ĐỔI MẬT KHẨU (USER)
+// XÁC THỰC OTP VÀ ĐỔI MẬT KHẨU (USER)
 // ==========================================
 export const handleVerifyOtpAndResetPasswordUser = async (
   req: Request,

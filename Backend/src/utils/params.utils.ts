@@ -1,5 +1,5 @@
 /**
- * Hàm phân tích số nguyên từ tham số query/body của request
+ * Hàm phân tích số nguyên từ tham số query/body của request.
  */
 export const parseIntParam = (value: unknown): number | null => {
   const normalized = Array.isArray(value) ? value[0] : value;
@@ -8,7 +8,7 @@ export const parseIntParam = (value: unknown): number | null => {
 };
 
 /**
- * Phân tích trường số nguyên với giá trị mặc định fallback
+ * Phân tích trường số nguyên với giá trị mặc định fallback.
  */
 export const parseIntegerField = (value: unknown, fallback?: number): number | undefined => {
   if (value === null || value === undefined || value === "") {
@@ -20,7 +20,7 @@ export const parseIntegerField = (value: unknown, fallback?: number): number | u
 };
 
 /**
- * Chuẩn hóa giá trị từ ô Excel (Xử lý các trường hợp đặc biệt như richText, hyperlink, result)
+ * Chuẩn hóa giá trị từ ô Excel, xử lý các trường hợp đặc biệt như richText, hyperlink, result.
  */
 export const normalizeCellValue = (value: any): string | number | null => {
   if (value === null || value === undefined) {

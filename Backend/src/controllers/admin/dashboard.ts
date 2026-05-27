@@ -1,11 +1,13 @@
 import type { Request, Response } from "express";
 import { prisma } from "../../lib/prisma.js";
 
+// Chuyển range từ query thành mốc thời gian bắt đầu để lọc dữ liệu dashboard.
 const parseIntParam = (value: string | string[] | undefined): number => {
   const normalized = Array.isArray(value) ? value[0] : value;
   return Number.parseInt(normalized ?? "", 10);
 };
 
+// Tính mốc bắt đầu theo tuần/tháng; nếu range = all thì trả về null.
 const getStartDateByRange = (range: string): Date | null => {
   const now = new Date();
 
@@ -24,6 +26,7 @@ const getStartDateByRange = (range: string): Date | null => {
   return null;
 };
 
+// Chuyển thời gian làm bài thành chuỗi HH:mm:ss để hiển thị trong bảng chi tiết user.
 const formatDuration = (start: Date, end: Date | null): string => {
   if (!end) {
     return "-";
@@ -43,6 +46,7 @@ const formatDuration = (start: Date, end: Date | null): string => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
+// Lấy dữ liệu tổng quan để FrontendWeb hiển thị dashboard admin.
 export const getDashboardOverview = async (req: Request, res: Response) => {
   try {
     const range = typeof req.query.range === "string" ? req.query.range : "month";
@@ -118,6 +122,7 @@ export const getDashboardOverview = async (req: Request, res: Response) => {
       { label: ">= 900", min: 900, max: Number.MAX_SAFE_INTEGER, count: 0 },
     ];
 
+    // Gom điểm vào các bucket TOEIC để vẽ biểu đồ phân phối.
     for (const session of sessions) {
       const score = session.total_score;
       if (score === null || score === undefined) {
@@ -155,6 +160,7 @@ export const getDashboardOverview = async (req: Request, res: Response) => {
   }
 };
 
+// Xuất báo cáo dashboard dưới dạng CSV để admin tải về.
 export const exportDashboardReport = async (req: Request, res: Response) => {
   try {
     const range = typeof req.query.range === "string" ? req.query.range : "month";
@@ -200,6 +206,7 @@ export const exportDashboardReport = async (req: Request, res: Response) => {
   }
 };
 
+// Lấy danh sách user để màn Quản lý người dùng trong FrontendWeb hiển thị.
 export const getDashboardUsers = async (req: Request, res: Response) => {
   try {
     const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
@@ -272,6 +279,7 @@ export const getDashboardUsers = async (req: Request, res: Response) => {
   }
 };
 
+// Lấy hồ sơ chi tiết của một user gồm lịch sử thi và bộ flashcard cá nhân.
 export const getUserProfile = async (req: Request, res: Response) => {
   try {
     const userId = parseIntParam(req.params.userId);
@@ -393,6 +401,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
   }
 };
 
+// Lấy chi tiết một bộ flashcard thuộc user để admin xem và moderating.
 export const getUserFlashcardSetDetail = async (req: Request, res: Response) => {
   try {
     const userId = parseIntParam(req.params.userId);
@@ -459,6 +468,7 @@ export const getUserFlashcardSetDetail = async (req: Request, res: Response) => 
   }
 };
 
+// Ghi nhận cảnh báo cho bộ flashcard của user khi cần xử lý vi phạm.
 export const warnUserFlashcardSet = async (req: Request, res: Response) => {
   try {
     const userId = parseIntParam(req.params.userId);
@@ -515,6 +525,7 @@ export const warnUserFlashcardSet = async (req: Request, res: Response) => {
   }
 };
 
+// Xóa/mở moderation cho bộ flashcard của user trong dashboard admin.
 export const moderateUserFlashcardSet = async (req: Request, res: Response) => {
   try {
     const userId = parseIntParam(req.params.userId);

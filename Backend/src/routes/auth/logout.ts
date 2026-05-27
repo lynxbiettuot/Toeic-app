@@ -6,14 +6,10 @@ import {
 
 const router = express.Router();
 
-// ==========================================
-// USER LOGOUT
-// ==========================================
+// Đăng xuất user và xóa refresh token trong DB.
 router.post("/user", logoutUser);
 
-// ==========================================
-// ADMIN LOGOUT
-// ==========================================
+// Đăng xuất admin và xóa refresh token trong DB.
 router.post("/admin", logoutAdmin);
 
 export default router;

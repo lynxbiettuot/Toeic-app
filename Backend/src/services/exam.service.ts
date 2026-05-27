@@ -16,7 +16,7 @@ const VALID_EXAM_STATUSES = ["DRAFT", "PUBLISHED", "HIDDEN"] as const;
 
 export class ExamService {
   /**
-   * Lấy danh sách đề thi cho Admin với các bộ lọc
+  * Lấy danh sách đề thi cho admin với các bộ lọc trên FrontendWeb.
    */
   static async getAdminExams(filters: { search?: string; status?: string; year?: number }) {
     const { search, status, year } = filters;
@@ -56,7 +56,7 @@ export class ExamService {
   }
 
   /**
-   * Lấy danh sách đề thi công khai cho User (kèm trạng thái hoàn thành và điểm cao nhất)
+    * Lấy danh sách đề thi công khai cho user, kèm trạng thái hoàn thành và điểm cao nhất.
    */
   static async getPublicExams(userId: number | null) {
     const exams = await prisma.exam_sets.findMany({
@@ -91,7 +91,7 @@ export class ExamService {
       orderBy: { submitted_at: "desc" },
     });
 
-    // Bản đồ điểm cao nhất và bộ session gần nhất
+    // Bản đồ điểm cao nhất và phiên làm bài gần nhất của từng đề.
     const bestSessionMap = new Map<number, any>();
     const latestSessionMap = new Map<number, any>();
 
@@ -117,7 +117,7 @@ export class ExamService {
   }
 
   /**
-   * Lấy danh sách câu hỏi cơ bản của một đề thi
+    * Lấy danh sách câu hỏi cơ bản của một đề thi cho màn chi tiết admin.
    */
   static async getExamQuestions(examSetId: number) {
     const exam = await prisma.exam_sets.findUnique({
@@ -143,7 +143,7 @@ export class ExamService {
   }
 
   /**
-   * Lấy danh sách câu hỏi đã ẩn đáp án đúng (dành cho User đi thi)
+    * Lấy danh sách câu hỏi đã ẩn đáp án đúng để user làm bài.
    */
   static async getSanitizedExamQuestions(examSetId: number) {
     const exam = await prisma.exam_sets.findUnique({
@@ -164,7 +164,7 @@ export class ExamService {
       orderBy: { question_number: "asc" },
     });
 
-    // Gom nhóm URL ảnh
+    // Gom nhóm URL ảnh theo bộ câu hỏi để FrontendWeb hiển thị đúng media.
     const groupImageUrlMap = new Map<number, string[]>();
     questions.forEach(q => {
       if (q.group_id) {
@@ -192,7 +192,7 @@ export class ExamService {
   }
 
   /**
-   * Lấy chi tiết một câu hỏi (bao gồm đáp án và nhóm câu hỏi)
+    * Lấy chi tiết một câu hỏi, bao gồm đáp án và dữ liệu nhóm câu hỏi.
    */
   static async getQuestionDetail(examSetId: number, questionNumber: number) {
     const question = await prisma.questions.findFirst({
@@ -231,7 +231,7 @@ export class ExamService {
 
     if (!question) throw new Error("Không tìm thấy câu hỏi.");
 
-    // Chuẩn hóa dữ liệu media (kế thừa từ Group nếu câu hỏi không có)
+    // Chuẩn hóa dữ liệu media, kế thừa từ nhóm nếu câu hỏi không có riêng.
     const resolvedImageUrl = mergePipeSeparatedValues(
       question.group?.image_url ?? null,
       question.image_url,
@@ -256,7 +256,7 @@ export class ExamService {
   }
 
   /**
-   * Tạo đề thi nháp (thủ công)
+    * Tạo đề thi nháp thủ công từ màn tạo đề trong FrontendWeb.
    */
   static async createManualExam(data: { title: string; year?: number; type?: string }) {
     if (!data.title) throw new Error("Tên đề thi là bắt buộc.");
@@ -272,7 +272,7 @@ export class ExamService {
   }
 
   /**
-   * Cập nhật trạng thái đề thi (Draft, Published, Hidden)
+    * Cập nhật trạng thái đề thi (Draft, Published, Hidden) theo thao tác admin.
    */
   static async updateExamStatus(examId: number, status: string) {
     if (!VALID_EXAM_STATUSES.includes(status as any)) {
@@ -283,13 +283,13 @@ export class ExamService {
       where: { id: examId },
       data: { 
         status: status as any,
-        deleted_at: null, // Reset deleted_at when status is updated
+        deleted_at: null, // Xóa cờ deleted_at khi trạng thái được cập nhật.
       },
     });
   }
 
   /**
-   * Xử lý Import đề thi từ Excel
+    * Xử lý import đề thi từ Excel theo template của FrontendWeb.
    */
   static async importExamFromExcel(buffer: Buffer, examData: { title: string; year: number; type?: string; createdBy?: number }) {
     const workbook = new ExcelJS.Workbook();
@@ -298,7 +298,7 @@ export class ExamService {
     const worksheet = workbook.worksheets[0] ?? workbook.getWorksheet(1);
     if (!worksheet) throw new Error("Không đọc được sheet đầu tiên trong file Excel.");
 
-    // Ánh xạ Headers
+    // Ánh xạ các header trong file Excel sang cột dữ liệu tương ứng.
     const headerRow = worksheet.getRow(1);
     const headerMap: Record<string, number> = {};
     headerRow.eachCell((cell, colNumber) => {
@@ -317,7 +317,7 @@ export class ExamService {
     };
 
     return prisma.$transaction(async (tx) => {
-      // 1. Tạo Exam Set
+      // 1. Tạo exam set mới.
       const exam = await tx.exam_sets.create({
         data: {
           title: examData.title.trim(),
@@ -331,7 +331,7 @@ export class ExamService {
       const createdGroups: Record<string, number> = {};
       let questionCount = 0;
 
-      // 2. Lặp qua các dòng dữ liệu (từ dòng 2)
+      // 2. Lặp qua các dòng dữ liệu, bắt đầu từ dòng 2.
       for (let i = 2; i <= worksheet.rowCount; i++) {
         const row = worksheet.getRow(i);
         const qNum = parseIntegerField(getVal(row, "Question_No"));
@@ -340,7 +340,7 @@ export class ExamService {
         const partNum = parseIntegerField(getVal(row, "Part"), 0) ?? 0;
         const groupRef = getVal(row, "Group_Ref")?.toString() || null;
 
-        // Validate URLs
+        // Kiểm tra URL media trước khi ghi vào CSDL.
         const gImg = getVal(row, "Group_Image_URL")?.toString() || null;
         const gAud = getVal(row, "Group_Audio_URL")?.toString() || null;
         const qImg = getVal(row, "Question_Image_URL")?.toString() || null;
@@ -350,7 +350,7 @@ export class ExamService {
           throw new Error(`Dòng ${i}: Tồn tại URL media không hợp lệ (phải là HTTP/HTTPS).`);
         }
 
-        // Xử lý Question Groups
+        // Xử lý nhóm câu hỏi nếu bộ đề dùng chung passage/media.
         let groupId: number | undefined;
         if (groupRef) {
           if (!createdGroups[groupRef]) {
@@ -372,7 +372,7 @@ export class ExamService {
         const correct = getVal(row, "Correct");
         if (!correct) throw new Error(`Dòng ${i}: Thiếu đáp án đúng.`);
 
-        // Tạo Question
+        // Tạo câu hỏi.
         const question = await tx.questions.create({
           data: {
             exam_set_id: exam.id,
@@ -388,7 +388,7 @@ export class ExamService {
           },
         });
 
-        // Tạo Answer Options
+        // Tạo các phương án trả lời.
         const options = [
           { label: "A", val: getVal(row, "Opt_A") },
           { label: "B", val: getVal(row, "Opt_B") },
@@ -418,7 +418,7 @@ export class ExamService {
   }
 
   /**
-   * Xóa mềm đề thi
+    * Xóa mềm đề thi để admin có thể khôi phục sau này.
    */
   static async softDeleteExam(examId: number) {
     return prisma.exam_sets.update({
@@ -431,7 +431,7 @@ export class ExamService {
   }
 
   /**
-   * Khôi phục đề thi
+    * Khôi phục đề thi đã xóa mềm.
    */
   static async restoreExam(examId: number) {
     return prisma.exam_sets.update({
@@ -444,7 +444,7 @@ export class ExamService {
   }
 
   /**
-   * Cập nhật thông tin cơ bản đề thi
+    * Cập nhật thông tin cơ bản của đề thi.
    */
   static async updateExam(examId: number, data: { title?: string; year?: number; type?: string }) {
     return prisma.exam_sets.update({
@@ -458,7 +458,7 @@ export class ExamService {
   }
 
   /**
-   * Thêm câu hỏi thủ công
+    * Thêm câu hỏi thủ công vào đề thi đang chỉnh sửa.
    */
   static async createQuestion(examSetId: number, data: any) {
     return prisma.$transaction(async (tx) => {
@@ -491,7 +491,7 @@ export class ExamService {
   }
 
   /**
-   * Cập nhật chi tiết câu hỏi
+    * Cập nhật chi tiết câu hỏi từ màn FrontendWeb.
    */
   static async updateQuestionDetail(examSetId: number, questionNumber: number, data: any) {
     const question = await prisma.questions.findFirst({

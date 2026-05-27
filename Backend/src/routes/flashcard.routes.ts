@@ -20,10 +20,11 @@ import { requireUserAuth } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-// Public & Discovery endpoints: cho phép xem và import bộ công khai.
+// Các endpoint public để FrontendWeb có thể xem thư viện flashcard công khai.
 router.get('/public', getPublicFlashcardSets);
 router.get('/public/:setId', getPublicFlashcardSetDetail);
 
+// Từ đây trở xuống cần người dùng đăng nhập.
 router.use(requireUserAuth);
 
 // CRUD bộ flashcard cá nhân.

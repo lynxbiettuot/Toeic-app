@@ -3,9 +3,7 @@ import { getAccessToken } from "../../controllers/auth/auth.js";
 
 const router = express.Router();
 
-// ==========================================
-// GET NEW ACCESS TOKEN FROM REFRESH TOKEN
-// ==========================================
+// Cấp lại access token từ refresh token cho cả web và mobile.
 router.post("/", getAccessToken);
 
 export default router;

@@ -29,14 +29,17 @@ const gemini = apiKey ? new GoogleGenAI({ apiKey }) : null;
 const GEMINI_MODEL = "gemini-2.5-flash";
 const MAX_IMAGE_COUNT = 3;
 
+// Chuẩn hóa MIME type ảnh nếu server trả về thiếu hoặc sai định dạng.
 const normalizeMimeType = (mimeType: string | null) => {
   const normalized = mimeType?.trim();
   return normalized && normalized.length > 0 ? normalized : "image/png";
 };
 
+// Làm sạch text trả về từ model để bỏ markdown code fence nếu có.
 const normalizeResponseText = (value: string) =>
   value.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
 
+// Tải ảnh từ URL và chuyển thành inline part để gửi cho Gemini.
 const fetchImageAsInlinePart = async (imageUrl: string): Promise<GeminiImagePart | null> => {
   try {
     const response = await fetch(imageUrl);
@@ -58,6 +61,7 @@ const fetchImageAsInlinePart = async (imageUrl: string): Promise<GeminiImagePart
   }
 };
 
+// Tạo prompt ngắn gọn để Gemini sinh giải thích reading.
 const buildPrompt = (input: ReadingExplanationInput) => {
   const optionsText = input.options
     .map((option) => `${option.option_label}. ${option.content}`)
@@ -94,6 +98,7 @@ const buildPrompt = (input: ReadingExplanationInput) => {
 
 export const isGeminiConfigured = Boolean(apiKey);
 
+// Sinh giải thích cho câu đọc và chỉ dùng khi Gemini đã được cấu hình.
 export const generateReadingExplanation = async (input: ReadingExplanationInput) => {
   if (!gemini) {
     throw new Error("GEMINI_API_KEY is not configured.");

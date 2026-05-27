@@ -3,7 +3,7 @@ import { VocabService } from "../../services/vocab.service.js";
 import { parseIntParam } from "../../utils/params.utils.js";
 
 /**
- * Lấy danh sách bộ từ vựng (Hệ thống & Public của User)
+ * Lấy danh sách bộ từ vựng để FrontendWeb quản lý bộ hệ thống và bộ user.
  */
 export const getSystemVocabSets = async (req: Request, res: Response) => {
   try {
@@ -37,7 +37,7 @@ export const getSystemVocabSets = async (req: Request, res: Response) => {
 };
 
 /**
- * Chi tiết bộ từ vựng
+ * Lấy chi tiết bộ từ vựng để màn chỉnh sửa hiển thị từng thẻ.
  */
 export const getSystemVocabSetDetail = async (req: Request, res: Response) => {
   try {
@@ -52,7 +52,7 @@ export const getSystemVocabSetDetail = async (req: Request, res: Response) => {
 };
 
 /**
- * Tạo bộ từ vựng mới
+ * Tạo bộ từ vựng mới từ màn tạo bộ trong FrontendWeb.
  */
 export const createSystemVocabSet = async (req: Request, res: Response) => {
   try {
@@ -65,7 +65,7 @@ export const createSystemVocabSet = async (req: Request, res: Response) => {
 };
 
 /**
- * Import từ Excel
+ * Import bộ từ vựng từ Excel/CSV cho admin.
  */
 export const importSystemVocabSet = async (req: Request, res: Response) => {
   try {
@@ -80,7 +80,7 @@ export const importSystemVocabSet = async (req: Request, res: Response) => {
 };
 
 /**
- * Cập nhật trạng thái
+ * Cập nhật trạng thái public/private của bộ từ vựng.
  */
 export const updateSystemVocabSetStatus = async (req: Request, res: Response) => {
   try {
@@ -96,7 +96,7 @@ export const updateSystemVocabSetStatus = async (req: Request, res: Response) =>
 };
 
 /**
- * Cập nhật thông tin bộ từ vựng
+ * Cập nhật thông tin cơ bản của bộ từ vựng.
  */
 export const updateSystemVocabSet = async (req: Request, res: Response) => {
   try {
@@ -110,7 +110,7 @@ export const updateSystemVocabSet = async (req: Request, res: Response) => {
 };
 
 /**
- * Xóa mềm
+ * Xóa mềm bộ từ vựng để giữ lại dữ liệu khi cần khôi phục.
  */
 export const softDeleteSystemVocabSet = async (req: Request, res: Response) => {
   try {
@@ -124,7 +124,7 @@ export const softDeleteSystemVocabSet = async (req: Request, res: Response) => {
 };
 
 /**
- * Cảnh báo User
+ * Gắn cảnh báo cho bộ từ vựng của user khi admin cần moderating.
  */
 export const warnUserVocabSet = async (req: Request, res: Response) => {
   try {
@@ -138,7 +138,7 @@ export const warnUserVocabSet = async (req: Request, res: Response) => {
 };
 
 /**
- * Khôi phục
+ * Khôi phục bộ từ vựng đã xóa mềm.
  */
 export const restoreSystemVocabSet = async (req: Request, res: Response) => {
   try {

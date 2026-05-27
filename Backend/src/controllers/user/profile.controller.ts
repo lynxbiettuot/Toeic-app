@@ -62,7 +62,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate input
+    // Kiểm tra dữ liệu đầu vào.
     if (full_name && full_name.trim().length < 2) {
       return res.status(400).json({
         message: "Name is too short",

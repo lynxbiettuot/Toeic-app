@@ -11,7 +11,7 @@ export const calculateReadingScore = (correctCount: number) =>
   correctCount <= 1 ? 5 : correctCount * 5 - 5;
 
 /**
- * Tính điểm phần Listening dựa trên số câu đúng. Thang điểm này được lấy từ logic trong controller gốc.
+ * Tính điểm phần Listening dựa trên số câu đúng; thang điểm này lấy từ logic trong controller gốc.
  */
 export const calculateListeningScore = (correctCount: number) => {
   if (correctCount === 0) {
@@ -30,7 +30,7 @@ export const calculateListeningScore = (correctCount: number) => {
 };
 
 /**
- * Tính tổng điểm TOEIC dựa trên số câu đúng của 2 phần.
+ * Tính tổng điểm TOEIC dựa trên số câu đúng của hai phần.
  */
 export const calculateToeicScore = (readingCorrectCount: number, listeningCorrectCount: number) => {
   return {

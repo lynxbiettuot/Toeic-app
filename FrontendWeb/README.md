@@ -41,6 +41,28 @@ Web admin hiện hỗ trợ các nhóm chức năng chính sau:
 - `ExamDetailPage`: xem và chỉnh sửa đề thi.
 - `VocabManagementPage`: quản lý bộ từ vựng/flashcard.
 
+## Phạm vi chức năng admin (chi tiết)
+
+Để rõ ràng cho phần quản trị, web admin hiện bao gồm các nhóm chức năng chi tiết sau (liên quan trực tiếp đến phần bạn phụ trách):
+
+- **Admin CRUD đề TOEIC:** tạo / sửa / xóa mềm / khôi phục đề, quản lý câu hỏi theo Part, thay đổi trạng thái (Draft / Published / Hidden), import đề từ Excel theo template và xem chi tiết câu hỏi để chỉnh sửa.
+- **Admin quản lý Flashcard / Vocab:** tạo / sửa / xóa bộ từ vựng hệ thống, import bộ từ file, bật/tắt public (PUBLIC/PRIVATE), quản lý thẻ trong bộ, và chức năng moderating (cảnh báo/ẩn bộ của user khi cần).
+- **Admin thống kê người dùng & kết quả:** dashboard tổng quan (số lượng user, phân phối điểm TOEIC), danh sách user, xem profile user kèm lịch sử session/kết quả, xem chi tiết kết quả một phiên, và xuất báo cáo (CSV) cho mục phân tích.
+
+## API (ví dụ các route admin)
+
+Trong FrontendWeb, các màn admin sẽ gọi các endpoint admin trên backend (ví dụ):
+
+- `GET /admin/dashboard` — lấy dữ liệu overview cho dashboard.
+- `GET /admin/users` — danh sách người dùng.
+- `GET /admin/users/:userId` — hồ sơ chi tiết user và lịch sử session.
+- `GET /admin/exams` — danh sách đề thi (admin view).
+- `POST /admin/exams/import` — import đề thi từ Excel.
+- `POST /admin/exams` / `PATCH /admin/exams/:id` / `DELETE /admin/exams/:id` — CRUD đề thi.
+- `GET /admin/vocab-sets` / `POST /admin/vocab-sets/import` — quản lý bộ từ vựng hệ thống.
+
+> Lưu ý: các route trên là mô tả tổng quát; frontend lấy base URL admin tại `src/api/apiClient.js` (mặc định `http://localhost:3000/admin`). Nếu backend đổi port hoặc deploy trên host khác, hãy cập nhật `src/api/apiClient.js` hoặc cấu hình môi trường.
+
 ## Cài đặt
 
 ### 1. Cài dependency

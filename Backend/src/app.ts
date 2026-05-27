@@ -10,10 +10,12 @@ import flashcardRoutes from './routes/flashcard.routes.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Đăng ký middleware parse body để nhận JSON và form data từ FrontendWeb.
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
+// Cấu hình CORS thủ công để frontend và backend chạy trên hai cổng khác nhau vẫn gọi được API.
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader(
@@ -29,18 +31,15 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   next();
 });
-//xác thực
+// Gắn các nhóm route chính của hệ thống.
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/exams', userExamRoutes);
 app.use('/flashcards', flashcardRoutes);
 
-//route của admin
-
-//route của user
-
 async function startServer() {
   try {
+    // Kết nối Prisma trước khi mở server để tránh nhận request khi DB chưa sẵn sàng.
     await prisma.$connect();
     console.log('Connected to MySQL Database successfully via Prisma!');
 

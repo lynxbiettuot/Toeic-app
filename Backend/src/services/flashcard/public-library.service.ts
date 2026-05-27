@@ -19,21 +19,21 @@ export const getPublicFlashcardSets = async (page: number, limit: number, search
   };
 
   if (currentUserId) {
-    // Separate conditions for Admin sets and other User sets
+    // Tách điều kiện cho bộ của admin và bộ của user để lọc chính xác hơn.
     whereClause.OR = [
       { 
         owner_user_id: null, 
-        status: 'PUBLISHED' // Admin sets must be PUBLISHED to be visible
+        status: 'PUBLISHED' // Bộ của admin phải PUBLISHED mới được hiển thị.
       },
       { 
         user: { id: { not: currentUserId } }, 
         visibility: 'PUBLIC' 
       }
     ];
-    // Remove top-level visibility filter as it's now handled inside OR for more precision
+    // Bỏ filter visibility ở cấp cao nhất vì đã xử lý bên trong OR cho chính xác hơn.
     delete whereClause.visibility;
   } else {
-    // If no userId, showing everything public/published
+    // Nếu không có userId thì hiển thị toàn bộ bộ public/published.
     whereClause.OR = [
       { owner_user_id: null, status: 'PUBLISHED' },
       { owner_user_id: { not: null }, visibility: 'PUBLIC' }
@@ -139,7 +139,7 @@ export const getPublicFlashcardSetDetail = async (setId: number) => {
 
 // Sao chép một bộ public thành bộ mới thuộc sở hữu của user hiện tại.
 export const importFlashcardSet = async (sourceSetId: number, userId: number) => {
-  // Get source set
+  // Lấy bộ nguồn.
   const sourceSet = await prisma.flashcard_sets.findUnique({
     where: { id: sourceSetId },
     include: { flashcards: true }
@@ -149,7 +149,7 @@ export const importFlashcardSet = async (sourceSetId: number, userId: number) =>
     throw new Error('404: Source set not found');
   }
 
-  // Create new set for user
+  // Tạo bộ mới cho user.
   const newSet = await prisma.flashcard_sets.create({
     data: {
       user: { connect: { id: userId } },
@@ -160,7 +160,7 @@ export const importFlashcardSet = async (sourceSetId: number, userId: number) =>
     }
   });
 
-  // Copy all flashcards
+  // Sao chép toàn bộ flashcard.
   if (sourceSet.flashcards.length > 0) {
     await prisma.flashcards.createMany({
       data: sourceSet.flashcards.map((card) => ({
@@ -183,7 +183,7 @@ export const importFlashcardSet = async (sourceSetId: number, userId: number) =>
         set_id: sourceSetId
       }
     },
-    update: {},  // If already saved, do nothing
+    update: {},  // Nếu đã lưu rồi thì không làm gì thêm.
     create: {
       user_id: userId,
       set_id: sourceSetId

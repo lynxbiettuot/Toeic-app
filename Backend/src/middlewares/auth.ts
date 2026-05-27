@@ -8,6 +8,7 @@ type AuthPayload = {
   role: string;
 };
 
+// Tách Bearer token từ header Authorization.
 const getBearerToken = (req: Request) => {
   const authorization = req.headers.authorization;
 
@@ -18,6 +19,7 @@ const getBearerToken = (req: Request) => {
   return authorization.slice("Bearer ".length).trim() || null;
 };
 
+// Middleware xác thực chung cho cả user và admin dựa trên access token.
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   const token = getBearerToken(req);
 
@@ -57,6 +59,7 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
+// Chỉ cho phép user thường đi qua middleware này.
 export const requireUserAuth = (req: Request, res: Response, next: NextFunction) => {
   return requireAuth(req, res, () => {
     if (!req.auth?.userId) {
@@ -70,6 +73,7 @@ export const requireUserAuth = (req: Request, res: Response, next: NextFunction)
   });
 };
 
+// Chỉ cho phép admin đi qua middleware này.
 export const requireAdminAuth = (req: Request, res: Response, next: NextFunction) => {
   return requireAuth(req, res, () => {
     if (!req.auth?.adminId) {

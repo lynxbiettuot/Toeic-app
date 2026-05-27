@@ -6,14 +6,10 @@ import {
 
 const router = express.Router();
 
-// ==========================================
-// USER LOGIN
-// ==========================================
+// Đăng nhập user cho app học viên.
 router.post("/user", loginUser);
 
-// ==========================================
-// ADMIN LOGIN
-// ==========================================
+// Đăng nhập admin cho FrontendWeb.
 router.post("/admin", loginAdmin);
 
 export default router;

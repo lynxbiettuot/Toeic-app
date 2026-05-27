@@ -1,5 +1,5 @@
 /**
- * Xử lý các chuỗi URL phân tách bằng dấu gạch đứng (|)
+ * Xử lý các chuỗi URL phân tách bằng dấu gạch đứng (|).
  */
 export const splitPipeSeparatedValues = (value: string | null | undefined): string[] => {
   if (!value) {
@@ -13,7 +13,7 @@ export const splitPipeSeparatedValues = (value: string | null | undefined): stri
 };
 
 /**
- * Gộp các chuỗi URL thành một chuỗi duy nhất phân tách bằng dấu gạch đứng
+ * Gộp các chuỗi URL thành một chuỗi duy nhất phân tách bằng dấu gạch đứng.
  */
 export const mergePipeSeparatedValues = (...values: Array<string | null | undefined>): string | null => {
   const merged = Array.from(new Set(values.flatMap((value) => splitPipeSeparatedValues(value))));
@@ -21,7 +21,7 @@ export const mergePipeSeparatedValues = (...values: Array<string | null | undefi
 };
 
 /**
- * Kiểm tra xem một chuỗi có phải là URL hợp lệ (HTTP/HTTPS) không
+ * Kiểm tra xem một chuỗi có phải là URL hợp lệ (HTTP/HTTPS) hay không.
  */
 export const isHttpUrl = (value: string | null | undefined): boolean => {
   if (!value) {
@@ -32,7 +32,7 @@ export const isHttpUrl = (value: string | null | undefined): boolean => {
 };
 
 /**
- * Thu thập tất cả URL ảnh từ câu hỏi và nhóm câu hỏi
+ * Thu thập tất cả URL ảnh từ câu hỏi và nhóm câu hỏi.
  */
 export const collectQuestionImageUrls = (
   question: { image_url?: string | null; group?: { image_url?: string | null } | null },
@@ -46,7 +46,7 @@ export const collectQuestionImageUrls = (
 };
 
 /**
- * Lấy thông tin media (ảnh, audio, transcript, passage) của một câu hỏi
+ * Lấy thông tin media (ảnh, audio, transcript, passage) của một câu hỏi.
  */
 export const getQuestionMedia = (
   question: { 

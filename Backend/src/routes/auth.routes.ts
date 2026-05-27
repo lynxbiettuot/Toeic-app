@@ -9,9 +9,7 @@ import profileRoutes from "./auth/profile.js";
 
 const router = express.Router();
 
-// ==========================================
-// AUTH ROUTES
-// ==========================================
+// Gom toàn bộ route xác thực để FrontendWeb gọi login, refresh token và profile.
 router.use("/login", loginRoutes);
 router.use("/signup", signupRoutes);
 router.use("/logout", logoutRoutes);

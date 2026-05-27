@@ -44,7 +44,7 @@ export const updateFlashcardSet = async (
     throw new Error(`${error.statusCode}: ${error.message}`);
   }
 
-  // Warned sets logic disabled as column is missing from DB
+  // Tắt logic cảnh báo vì cột tương ứng chưa có trong CSDL.
   const effectiveVisibility = visibility;
 
   return prisma.flashcard_sets.update({
@@ -98,7 +98,7 @@ export const deleteFlashcardSet = async (setId: number, userId: number) => {
       where: { set_id: setId }
     });
 
-    // Keep imported clones (logic hidden as imported_from_set_id is missing from DB)
+    // Giữ lại logic clone đã import nếu sau này bổ sung cột imported_from_set_id.
     /*
     await tx.flashcard_sets.updateMany({
       where: { imported_from_set_id: setId },

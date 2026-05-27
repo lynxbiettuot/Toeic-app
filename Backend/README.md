@@ -3,9 +3,9 @@
 Backend là API server của TOEIC App, chịu trách nhiệm cho các chức năng:
 
 - xác thực người dùng và admin
-- quản lý đề thi TOEIC
-- quản lý flashcard và spaced repetition
-- lưu kết quả làm bài, lịch sử và thống kê
+- quản lý đề thi TOEIC, gồm CRUD đề và câu hỏi cho admin
+- quản lý flashcard và spaced repetition, gồm cả thư viện công khai và thư viện cá nhân
+- lưu kết quả làm bài, lịch sử và thống kê cho user và admin
 - tích hợp Gemini để sinh giải thích cho câu hỏi reading
 
 ## Công nghệ
@@ -56,6 +56,10 @@ Backend quản lý:
 - session làm bài
 - submit bài
 - xem lại đáp án và giải thích
+- CRUD đề thi cho admin
+- import đề thi bằng Excel
+- thêm, sửa, xóa và khôi phục câu hỏi trong đề
+- đổi trạng thái đề thi để public hoặc ẩn
 
 ### 3. Flashcard và Spaced Repetition
 
@@ -65,12 +69,24 @@ Backend hỗ trợ:
 - tạo/sửa/xóa flashcard trong bộ
 - xem bộ công khai
 - import bộ công khai vào thư viện cá nhân
+- quản lý bộ flashcard hệ thống bằng admin
+- đổi trạng thái public/private, ẩn hoặc khôi phục bộ flashcard
 - lấy thẻ đến hạn ôn
 - chấm mức độ nhớ
 - tính lịch ôn theo SM-2
 - ghi review log và thống kê số lần ôn
 
-### 4. Gemini
+### 4. Dashboard và thống kê
+
+Backend cung cấp dữ liệu cho màn quản trị thống kê:
+
+- tổng quan số lượng user, đề thi và bộ flashcard
+- danh sách user và thông tin chi tiết từng user
+- lịch sử làm bài và kết quả theo từng đề
+- thống kê điểm số và phân phối kết quả
+- xuất dữ liệu báo cáo cho admin nếu cần
+
+### 5. Gemini
 
 Gemini chỉ dùng để sinh phần giải thích ngắn cho câu reading. Backend lấy đáp án đúng từ CSDL trước, rồi mới gửi dữ liệu phù hợp sang Gemini để sinh explanation.
 
@@ -96,11 +112,8 @@ Sau đó cấu hình các biến cần thiết.
 
 | Biến | Ý nghĩa |
 |---|---|
-| `DATABASE_HOST` | Host MySQL/MariaDB |
-| `DATABASE_PORT` | Port database |
-| `DATABASE_USER` | Username database |
-| `DATABASE_PASSWORD` | Mật khẩu database |
-| `DATABASE_NAME` | Tên database |
+| `DATABASE_URL` | Chuỗi kết nối MySQL/MariaDB dùng cho Prisma |
+| `SHADOW_DATABASE_URL` | Chuỗi kết nối database shadow cho migration |
 | `JWT_ACCESS_SECRET` | Secret cho access token |
 | `JWT_REFRESH_SECRET` | Secret cho refresh token |
 | `EMAIL_USER` | Email gửi OTP |
@@ -168,6 +181,13 @@ npm start
 
 - `GET /exams`
 - `POST /exams/:id/sessions`
+- `GET /admin/dashboard/overview`
+- `GET /admin/dashboard/users`
+- `GET /admin/exams`
+- `POST /admin/exams`
+- `POST /admin/exams/import-excel`
+- `GET /admin/vocab-sets`
+- `POST /admin/vocab-sets/import`
 - `POST /auth/login/user`
 - `POST /auth/login/admin`
 - `POST /auth/refresh-token`

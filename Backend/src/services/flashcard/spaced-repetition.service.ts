@@ -118,7 +118,7 @@ export const rateReviewCard = async (cardId: number, userId: number, rating: Rev
     reviewState?.repetitions ?? 0
   );
 
-  // Update or create spaced repetition state
+  // Cập nhật hoặc tạo mới trạng thái spaced repetition.
   if (reviewState) {
     await prisma.spaced_repetition_cards.update({
       where: {
@@ -151,7 +151,7 @@ export const rateReviewCard = async (cardId: number, userId: number, rating: Rev
     });
   }
 
-  // Log the review
+  // Ghi lại lần ôn tập này.
   await prisma.flashcard_review_logs.create({
     data: {
       user_id: userId,
@@ -161,7 +161,7 @@ export const rateReviewCard = async (cardId: number, userId: number, rating: Rev
     }
   });
 
-  // Count remaining due cards
+  // Đếm lại số thẻ còn đến hạn.
   const dueCount = await countDueCards(userId, nextSchedule.now);
 
   return {

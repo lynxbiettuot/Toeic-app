@@ -1,5 +1,5 @@
-// Flashcard Card Controller.
-// Route handlers cho các thao tác CRUD trên flashcard trong một bộ.
+// Controller xử lý các request CRUD cho từng flashcard trong một bộ.
+// Các route handler đều kiểm tra dữ liệu đầu vào trước khi gọi service.
 
 import type { Request, Response } from 'express';
 import {

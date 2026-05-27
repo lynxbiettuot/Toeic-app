@@ -14,7 +14,7 @@ import {
 
 export class TestSessionService {
   /**
-   * Khởi tạo một phiên làm bài mới
+    * Khởi tạo một phiên làm bài mới cho user làm bài trên FrontendWeb.
    */
   static async startSession(userId: number, examId: number) {
     const [exam, questionCount] = await Promise.all([
@@ -44,7 +44,7 @@ export class TestSessionService {
   }
 
   /**
-   * Nộp bài thi, tính điểm và lưu kết quả
+    * Nộp bài thi, tính điểm và lưu toàn bộ kết quả vào CSDL.
    */
   static async submitAnswers(sessionId: number, examId: number, userId: number, answers: any[], isPractice: boolean = false) {
     const session = await prisma.test_sessions.findFirst({
@@ -103,7 +103,7 @@ export class TestSessionService {
   }
 
   /**
-   * Lấy dữ liệu phiên làm bài (Hàm helper nội bộ)
+    * Lấy dữ liệu phiên làm bài, dùng chung cho các API summary và detail.
    */
   private static async loadSessionData(examId: number, sessionId: number, userId: number) {
     const [exam, session] = await Promise.all([
@@ -138,7 +138,7 @@ export class TestSessionService {
   }
 
   /**
-   * Lấy thống kê tổng quát của bài thi
+    * Lấy thống kê tổng quát của bài thi để FrontendWeb render trang kết quả.
    */
   static async getSessionSummary(examId: number, sessionId: number, userId: number) {
     const data = await this.loadSessionData(examId, sessionId, userId);
@@ -148,7 +148,7 @@ export class TestSessionService {
     const answeredCount = data.userAnswerMap.size;
     const wrongCount = Math.max(answeredCount - correctCount, 0);
 
-    // Thống kê theo Part
+    // Thống kê theo từng part để vẽ bảng tóm tắt kết quả.
     const partBuckets = new Map<number, any>();
     data.questions.forEach(q => {
       const current = partBuckets.get(q.part_number) || { correct_count: 0, total: 0 };
@@ -177,7 +177,7 @@ export class TestSessionService {
   }
 
   /**
-   * Lấy chi tiết một câu hỏi trong phiên (kèm giải thích AI nếu cần)
+    * Lấy chi tiết một câu hỏi trong phiên, kèm giải thích AI nếu cần.
    */
   static async getQuestionDetail(examId: number, sessionId: number, questionId: number, userId: number) {
     const data = await this.loadSessionData(examId, sessionId, userId);
@@ -191,7 +191,7 @@ export class TestSessionService {
 
     let aiExplanation = question.explanation;
 
-    // Nếu câu hỏi chưa có giải thích và là Reading, gọi Gemini
+    // Nếu câu hỏi chưa có giải thích và là Reading thì gọi Gemini.
     if (data.session.status === "COMPLETED" && !aiExplanation && isGeminiConfigured && isReadingQuestion(question)) {
       try {
         const correctOpt = question.answers.find(a => a.option_label === question.correct_answer);
@@ -238,7 +238,7 @@ export class TestSessionService {
   }
 
   /**
-   * Lấy danh sách câu hỏi của một Part cụ thể trong phiên làm bài
+    * Lấy danh sách câu hỏi của một Part cụ thể trong phiên làm bài.
    */
   static async getTestSessionPartQuestions(examId: number, sessionId: number, partNumber: number, userId: number) {
     const data = await this.loadSessionData(examId, sessionId, userId);
@@ -275,7 +275,7 @@ export class TestSessionService {
   }
 
   /**
-   * Lấy lịch sử các câu trả lời sai của người dùng, nhóm theo đề thi
+    * Lấy lịch sử các câu trả lời sai của người dùng, nhóm theo đề thi.
    */
   static async getWrongAnswerHistory(userId: number) {
     const allUserAnswers = await prisma.user_answers.findMany({
@@ -290,7 +290,7 @@ export class TestSessionService {
 
     if (allUserAnswers.length === 0) return [];
 
-    // Tìm trạng thái mới nhất cho từng câu hỏi
+    // Tìm trạng thái mới nhất cho từng câu hỏi.
     const latestStatusMap = new Map<number, any>();
     for (const ua of allUserAnswers) {
       if (!latestStatusMap.has(ua.question_id)) {
@@ -298,11 +298,11 @@ export class TestSessionService {
       }
     }
 
-    // Lọc ra các câu mà trạng thái mới nhất vẫn là SAI
+    // Lọc ra các câu mà trạng thái mới nhất vẫn là sai.
     const currentWrong = Array.from(latestStatusMap.values()).filter(ua => !ua.is_correct);
     if (currentWrong.length === 0) return [];
 
-    // Nhóm theo Exam Set
+    // Nhóm theo đề thi để FrontendWeb hiển thị theo từng bộ đề.
     const examMap = new Map<number, any>();
     for (const ua of currentWrong) {
       const exam = ua.question.exam_set;
